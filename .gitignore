@@ -1,25 +1,40 @@
-# Arquivos tempor�rios de notebooks
+# =============================================================================
+# .gitignore — arquivos que NAO devem ser versionados pelo Git
+# -----------------------------------------------------------------------------
+# Convencao do projeto: dados, modelos e artefatos derivados sao versionados
+# exclusivamente pelo DVC (ver dvc.yaml). O Git guarda apenas codigo, configs,
+# metricas leves e documentos.
+# =============================================================================
+
+# --- Notebooks ---
 .ipynb_checkpoints/
 
-# C�digos compilados do Python
+# --- Python ---
 __pycache__/
 *.pyc
+*.pyo
 
-# Modelos salvos
-#*.pkl
-*.h5
-*.keras
+# --- Ambientes virtuais ---
+.venv/
+venv/
 
-# Bases de dados (caso n�o queira versionar)
-#*.csv
-#*.csv.gz
-#*.parquet
-
-# Arquivos do sistema
-.DS_Store
-/metrics.json
-.trae/
+# --- Segredos e configuracoes locais (nunca versionar) ---
 .env
 .env.*
-.venv/
+.dvc/config.local
+
+# --- Rastreamento local do MLflow (o resumo publico fica em reports/) ---
+mlruns/
+
+# --- Caches de ferramentas ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Arquivos de sistema operacional ---
+.DS_Store
+Thumbs.db
+
+# --- Artefatos de ferramentas locais ---
+.trae/
 scripts/

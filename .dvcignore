@@ -1,3 +1,21 @@
-# Add patterns of files dvc should ignore, which could improve
-# the performance. Learn more at
-# https://dvc.org/doc/user-guide/dvcignore
+# =============================================================================
+# .dvcignore — padroes que o DVC ignora ao escanear o repositorio.
+# -----------------------------------------------------------------------------
+# Objetivo: ganho de performance. NAO altera o versionamento de dados e modelos
+# declarado em dvc.yaml (deps/outs continuam sendo rastreados normalmente).
+# =============================================================================
+
+# Ambientes virtuais e caches locais
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Rastreamento local do MLflow
+mlruns/
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
