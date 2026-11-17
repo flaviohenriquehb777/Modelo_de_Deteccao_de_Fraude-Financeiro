@@ -1,7 +1,8 @@
 schema: '2.0'
 stages:
   prepare_data:
-    cmd: python src/config/prepare_data.py dados/credicard.csv.gz dados/credicard_tratado.parquet
+    cmd: python src/config/prepare_data.py dados/credicard.csv.gz 
+      dados/credicard_tratado.parquet
     deps:
     - path: dados/credicard.csv.gz
       hash: md5
@@ -9,12 +10,12 @@ stages:
       size: 68511515
     - path: params.yaml
       hash: md5
-      md5: 8bbbece797f795858fd94c4bff3cba56
-      size: 926
+      md5: f394a6dff4919bc35bcce054ec6a7561
+      size: 1355
     - path: src/config/paths.py
       hash: md5
-      md5: 6a7faf531db77c12861acf41238d71d8
-      size: 1093
+      md5: c5834e747e4bba4152e47a3b1d0034a4
+      size: 1266
     - path: src/config/prepare_data.py
       hash: md5
       md5: 6bbe129107ae98006044a4d8c0877971
@@ -22,27 +23,27 @@ stages:
     outs:
     - path: dados/credicard_tratado.parquet
       hash: md5
-      md5: 9fd78d0e9215f298cd4e43fe2ca5a6d2
-      size: 73823197
+      md5: 9c57de71f01cd1b331feae139a3f3a66
+      size: 73074277
     - path: reports/data_quality_report.json
       hash: md5
-      md5: 2833ca078220a423339d857c819ad104
+      md5: 74b33db4c986f5a704802d2c769b675b
       size: 588
   train_model:
     cmd: python src/config/train_model.py
     deps:
     - path: dados/credicard_tratado.parquet
       hash: md5
-      md5: 9fd78d0e9215f298cd4e43fe2ca5a6d2
-      size: 73823197
+      md5: 9c57de71f01cd1b331feae139a3f3a66
+      size: 73074277
     - path: params.yaml
       hash: md5
-      md5: 8bbbece797f795858fd94c4bff3cba56
-      size: 926
+      md5: f394a6dff4919bc35bcce054ec6a7561
+      size: 1355
     - path: src/config/paths.py
       hash: md5
-      md5: 6a7faf531db77c12861acf41238d71d8
-      size: 1093
+      md5: c5834e747e4bba4152e47a3b1d0034a4
+      size: 1266
     - path: src/config/train_model.py
       hash: md5
       md5: 8b1f8edc5a5f1487edc592d482bc4709
@@ -50,56 +51,56 @@ stages:
     outs:
     - path: metrics.json
       hash: md5
-      md5: 780a6da3fe86ad56016847f33a49d6cd
-      size: 2135
+      md5: 1c40ce2d6a26e4032112477a1c252b67
+      size: 2136
     - path: models/model.pkl
       hash: md5
-      md5: 67bca6135351c718dc3d851695fe8787
-      size: 887464
+      md5: f2c0a290d9f425f75f905aaa0431fe14
+      size: 896891
     - path: models/model_metadata.json
       hash: md5
-      md5: 07d7a5d6d30e62c6d3209711a0b70a77
+      md5: a2864f7af37cb91fd8cb7263ab68b448
       size: 960
   generate_shap_insights:
     cmd: python src/config/generate_shap_insights.py
     deps:
     - path: dados/credicard_tratado.parquet
       hash: md5
-      md5: 9fd78d0e9215f298cd4e43fe2ca5a6d2
-      size: 73823197
+      md5: 9c57de71f01cd1b331feae139a3f3a66
+      size: 73074277
     - path: models/model.pkl
       hash: md5
-      md5: 67bca6135351c718dc3d851695fe8787
-      size: 887464
+      md5: f2c0a290d9f425f75f905aaa0431fe14
+      size: 896891
     - path: models/model_metadata.json
       hash: md5
-      md5: 07d7a5d6d30e62c6d3209711a0b70a77
+      md5: a2864f7af37cb91fd8cb7263ab68b448
       size: 960
     - path: params.yaml
       hash: md5
-      md5: 8bbbece797f795858fd94c4bff3cba56
-      size: 926
+      md5: f394a6dff4919bc35bcce054ec6a7561
+      size: 1355
     - path: src/config/generate_shap_insights.py
       hash: md5
       md5: f7f30fa6fdf417ee330e6bf4fd2e259c
       size: 8518
     - path: src/config/paths.py
       hash: md5
-      md5: 6a7faf531db77c12861acf41238d71d8
-      size: 1093
+      md5: c5834e747e4bba4152e47a3b1d0034a4
+      size: 1266
     outs:
     - path: reports/shap_explanations
       hash: md5
-      md5: 0fef8e1405702443d1907872b1947159.dir
-      size: 3059621
+      md5: 016bd1e27d48288f18e8480473cc9a50.dir
+      size: 3098235
       nfiles: 13
   generate_shap_report:
     cmd: python src/config/generate_shap_report.py
     deps:
     - path: reports/shap_explanations/
       hash: md5
-      md5: 0fef8e1405702443d1907872b1947159.dir
-      size: 3059621
+      md5: 016bd1e27d48288f18e8480473cc9a50.dir
+      size: 3098235
       nfiles: 13
     - path: src/config/generate_shap_report.py
       hash: md5
@@ -107,10 +108,10 @@ stages:
       size: 6023
     - path: src/config/paths.py
       hash: md5
-      md5: 6a7faf531db77c12861acf41238d71d8
-      size: 1093
+      md5: c5834e747e4bba4152e47a3b1d0034a4
+      size: 1266
     outs:
     - path: reports/shap_report.pdf
       hash: md5
-      md5: 36bcc11b1f27c5da383a3492ee7c3980
-      size: 1921294
+      md5: ab0251e28bc6d3914c030c1539284911
+      size: 1931329

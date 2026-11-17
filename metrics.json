@@ -68,7 +68,7 @@
   "model": {
     "artifact_path": "models\\model.pkl",
     "type": "XGBClassifier",
-    "random_state": 0,
+    "random_state": 42,
     "max_depth": 7,
     "n_estimators": 300,
     "learning_rate": 0.1,

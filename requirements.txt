@@ -1,18 +1,37 @@
-pandas
-matplotlib
-seaborn
-numpy
-numexpr>=2.10.2
-xgboost
-scipy
-scikit-learn
-imbalanced-learn
-openpyxl
-joblib
-pyarrow
-shap
-fpdf2
-PyYAML
-dvc
-dagshub
-mlflow
+# =============================================================================
+# Dependencias reproduziveis do Modelo de Deteccao de Fraude Financeira
+# -----------------------------------------------------------------------------
+# Versoes fixadas (==) a partir do ambiente validado onde o `dvc repro` roda.
+# Python de referencia: 3.12 (ver .github/workflows/ci-tests.yml).
+# Observacao: xgboost e shap exigem Python >= 3.12; por isso a CI roda em 3.12.
+# =============================================================================
+
+# --- Manipulacao e processamento de dados ---
+pandas==2.3.3
+numpy==2.4.6
+scipy==1.17.1
+numexpr==2.14.1
+pyarrow==24.0.0
+openpyxl==3.1.5
+
+# --- Machine Learning ---
+scikit-learn==1.9.0
+xgboost==3.3.0
+imbalanced-learn==0.14.2
+joblib==1.5.3
+
+# --- Visualizacao ---
+matplotlib==3.11.0
+seaborn==0.13.2
+
+# --- Explainability ---
+shap==0.52.0
+
+# --- Relatorios e configuracao ---
+fpdf2==2.8.7
+PyYAML==6.0.3
+
+# --- MLOps (versionamento, rastreamento) ---
+dvc==3.67.1
+dagshub==0.7.0
+mlflow==3.14.0

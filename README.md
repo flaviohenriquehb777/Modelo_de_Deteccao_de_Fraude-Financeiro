@@ -1,266 +1,284 @@
-# 🚨 Modelo de Detecção de Fraude em Transações (Credicard - Brasil)
+<h1 align="center">🚨 Modelo de Detecção de Fraude em Transações (Credicard — Brasil)</h1>
 
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![DVC Managed](https://img.shields.io/badge/DVC-Managed-blue)](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro)
-[![CI Tests](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/actions/workflows/ci-tests.yml)
-[![MLflow Tracking](https://img.shields.io/badge/MLflow-Tracking-orange)](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/experiments)
-[![SHAP Explainability](https://img.shields.io/badge/SHAP-Explainability-purple)]()
-[![DagsHub Repository](https://img.shields.io/badge/DagsHub-Repository-purple)](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro)
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-orange.svg)
-![scikit-learn](https://img.shields.io/badge/Scikit--learn-ML-blueviolet)
-![XGBoost](https://img.shields.io/badge/XGBoost-Model-success)
+<p align="center"><i>XGBoost + pipeline DVC reprodutível + explainability SHAP + serving com contrato de inferência validado.</i></p>
 
-Modelo de Machine Learning para detecção de transações financeiras fraudulentas, combinando evolução experimental, versionamento com DVC, rastreamento de experimentos com MLflow/DagsHub e evidências automatizadas de qualidade via GitHub Actions.
+<p align="center">
+<a href="LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
+<a href="https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro"><img src="https://img.shields.io/badge/DVC-Managed-blue" alt="DVC Managed"></a>
+<a href="https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/actions/workflows/ci-tests.yml"><img src="https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/actions/workflows/ci-tests.yml/badge.svg" alt="CI Tests"></a>
+<a href="https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/experiments"><img src="https://img.shields.io/badge/MLflow-Tracking-orange" alt="MLflow Tracking"></a>
+<a href="https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro"><img src="https://img.shields.io/badge/DagsHub-Repository-purple" alt="DagsHub"></a>
+</p>
 
-## 🏷️ Releases
-
-- [snapshot — Entrega original (referência)](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/snapshot)
-- [v1.0.0 — Entrega original do modelo](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.0.0)
-- [v1.1.0 — Rename + DagsHub/DVC/CI](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.1.0)
-- [v1.2.0 — Production Hardening Update](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.2.0)
-
-## 🧭 Status Atual
-
-- **Entrega histórica preservada:** o commit original segue explicitamente marcado pelas tags `snapshot` e `v1.0.0`.
-- **Atualização técnica posterior:** a release `v1.1.0` consolida o rename do repositório e o alinhamento entre GitHub, DVC, CI e DagsHub.
-- **Update profissional atual:** a release `v1.2.0` consolida reprodutibilidade, hardening, testes de produção, serving e evidências públicas para avaliação técnica.
-- **Baseline de negócio comprovado:** o melhor experimento histórico registrado no projeto atingiu **Precisão 92,27%** e **Recall 81,02%**.
-- **Evidência pública confirmada:** o DagsHub público expõe **7 experimentos** e **1 modelo registrado** visíveis para avaliadores sem autenticação.
-- **Artefatos organizados por papel:** `models/model.pkl` representa o artefato operacional atual do pipeline DVC, enquanto `models/best_model_xgboost.reference.json` preserva a referência histórica do melhor modelo experimental sem depender de um ponteiro DVC quebrado.
-- **Posicionamento honesto:** o repositório já demonstra maturidade forte de portfólio em MLOps, enquanto a evolução para prontidão plena de produção segue como trilha ativa de hardening.
-
-## ⚡ Como Avaliar Em 3 Minutos
-
-1. Veja a linha do tempo nas [Releases](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases).
-2. Confira o pipeline versionado em [dvc.yaml](dvc.yaml).
-3. Valide a automação de testes em [ci-tests.yml](.github/workflows/ci-tests.yml).
-4. Consulte o experimento histórico em [09_777_MLFlow_Deployment.ipynb](notebooks/09_777_MLFlow_Deployment.ipynb).
-5. Abra os [Experiments](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/experiments) e os [Models](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/models) públicos no DagsHub.
-6. Veja o resumo consolidado em [mlflow_public_registry_summary.json](reports/mlflow_public_registry_summary.json).
+<p align="center">
+<img src="https://img.shields.io/badge/Python-3.12-blue.svg" alt="Python 3.12">
+<img src="https://img.shields.io/badge/Depend%C3%AAncias-Fixadas%20(==)-success" alt="Dependências fixadas">
+<img src="https://img.shields.io/badge/Testes-33%20passando-brightgreen" alt="Testes">
+<img src="https://img.shields.io/badge/SEED-42-informational" alt="SEED 42">
+<img src="https://img.shields.io/badge/XGBoost-3.3.0-success" alt="XGBoost">
+<img src="https://img.shields.io/badge/SHAP-0.52.0-purple" alt="SHAP">
+</p>
 
 ---
 
-## 📋 Sumário
+## Sumário
 
+- [Status Atual](#-status-atual)
 - [Descrição do Modelo](#-descrição-do-modelo)
 - [Contexto dos Dados](#-contexto-dos-dados)
+- [Arquitetura e Pipeline DVC](#-arquitetura-e-pipeline-dvc)
 - [Algoritmos e Técnicas Utilizadas](#-algoritmos-e-técnicas-utilizadas)
-- [MLOps e Infraestrutura Profissional](#-mlops-e-infraestrutura-profissional)
+- [MLOps e Infraestrutura](#-mlops-e-infraestrutura)
 - [SHAP Explainability](#-shap-explainability)
-- [Estrutura do Modelo](#-estrutura-do-modelo)
-- [Processo de Desenvolvimento](#-processo-de-desenvolvimento)
-- [Instalação e Uso](#-instalação-e-uso)
+- [Estrutura do Repositório](#-estrutura-do-repositório)
+- [Como Reproduzir](#-como-reproduzir)
+- [Contrato de Inferência](#-contrato-de-inferência)
+- [Métricas do Modelo](#-métricas-do-modelo)
 - [Evidências Técnicas](#-evidências-técnicas)
 - [Guia do Avaliador](#-guia-do-avaliador)
-- [Diferenciais do Modelo](#-diferenciais-do-modelo)
-- [Resultados e Conclusão](#-resultados-e-conclusão)
+- [Diferenciais do Projeto](#-diferenciais-do-projeto)
 - [Interpretação das Métricas](#-interpretação-das-métricas)
+- [Releases](#-releases)
 - [Roadmap](#-roadmap)
 - [Licença](#-licença)
 - [Contato](#-contato)
 
 ---
 
+## 🧭 Status Atual
+
+- **Reprodutibilidade verificada:** `dvc repro` executa os 4 estágios e, na segunda execução, retorna `Data and pipelines are up to date.` (pipeline idempotente).
+- **Dependências fixadas:** todas as bibliotecas têm versão exata (`==`) em [requirements.txt](requirements.txt), geradas a partir do ambiente que produziu o [dvc.lock](dvc.lock).
+- **Python 3.12:** exigido por `xgboost==3.3.0` e `shap==0.52.0` (`requires-python >= 3.12`). A CI roda no mesmo interpretador usado para gerar o lock.
+- **Determinismo:** `SEED = 42` aplicado na validação cruzada, no XGBoost e no SHAP. O preparo de dados é determinístico por construção.
+- **Gate de aceite automatizado:** o treino só é aprovado se atingir os critérios de negócio de precisão/recall (ver [Métricas do Modelo](#-métricas-do-modelo)).
+- **Higiene de versionamento:** `mlruns/` não é mais rastreado pelo Git; dados, modelo e artefatos SHAP são versionados exclusivamente pelo DVC.
+- **Suíte de testes:** 33 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
+
+---
+
 ## 📊 Descrição do Modelo
 
-Este modelo tem como objetivo desenvolver um modelo de Machine Learning capaz de identificar transações financeiras fraudulentas, com foco em otimizar a balança entre a detecção de fraudes e a minimização de falsos positivos. O modelo final foi ajustado para atender às necessidades de negócio, garantindo **alta precisão** para evitar bloqueios indevidos e **explicabilidade completa** via SHAP.
+Modelo de Machine Learning para identificar transações financeiras fraudulentas, otimizando o equilíbrio entre **alta precisão** (evitar bloqueios indevidos de clientes legítimos) e **recall competitivo** (capturar a maior parte das fraudes). O modelo operacional é um **XGBoost** treinado sobre features anonimizadas por PCA, com **explicabilidade completa via SHAP** e **threshold de decisão calibrado por objetivo de negócio**.
 
 ---
 
 ## 📁 Contexto dos Dados
 
-A base de dados contém transações financeiras anonimizadas por PCA (Principal Component Analysis). As principais colunas são:
+Base pública de transações de cartão de crédito anonimizadas por PCA (referência *Credit Card Fraud Detection*):
 
-- **Time**: Segundos decorridos entre cada transação e a primeira transação.
-- **Amount**: Valor da transação.
-- **Class**: Variável de resposta (1 = fraude, 0 = legítima).
-- **V1, V2, ... V28**: Componentes principais do PCA.
+| Característica | Valor (auditado em `reports/data_quality_report.json`) |
+|---|---|
+| Transações (linhas) | 284.807 |
+| Colunas | 31 |
+| Valores nulos | 0 |
+| Taxa de fraude | 0,173% (desbalanceamento extremo) |
 
-O dataset é altamente desbalanceado, com pouquíssimas fraudes em relação às transações legítimas.
+Colunas principais:
+
+- **Time** — segundos decorridos desde a primeira transação.
+- **Amount** — valor da transação.
+- **Class** — variável-alvo (1 = fraude, 0 = legítima).
+- **V1 … V28** — componentes principais do PCA.
+
+> O dataset é tratado como **altamente desbalanceado**, com `scale_pos_weight` calculado automaticamente pelo pipeline.
+
+---
+
+## 🏗️ Arquitetura e Pipeline DVC
+
+### Visão de ponta a ponta
+
+```mermaid
+flowchart LR
+    A["Dados brutos<br/>credicard.csv.gz"] --> B["prepare_data"]
+    B --> C["credicard_tratado.parquet"]
+    C --> D["train_model<br/>XGBoost + CV 10-fold"]
+    D --> E["model.pkl<br/>model_metadata.json"]
+    D --> F["metrics.json<br/>gate de aceite"]
+    E --> G["generate_shap_insights"]
+    C --> G
+    G --> H["shap_explanations/"]
+    H --> I["generate_shap_report"]
+    I --> J["shap_report.pdf"]
+    E --> K["src/serving/cli.py<br/>inferência"]
+    F --> K
+```
+
+### Grafo do pipeline DVC ([dvc.yaml](dvc.yaml))
+
+```mermaid
+flowchart TD
+    RAW["dados/credicard.csv.gz"] --> P1
+    PARAMS["params.yaml (SEED = 42)"] --> P1
+    P1["prepare_data<br/>MinMaxScaler + Yeo-Johnson"]
+    P1 --> PQ["dados/credicard_tratado.parquet"]
+    P1 --> DQ["reports/data_quality_report.json"]
+    PQ --> P2["train_model<br/>XGBoost + validação cruzada"]
+    PARAMS --> P2
+    P2 --> MDL["models/model.pkl<br/>models/model_metadata.json"]
+    P2 --> MET["metrics.json"]
+    MDL --> P3["generate_shap_insights<br/>SHAP sobre 2.000 amostras"]
+    PQ --> P3
+    PARAMS --> P3
+    P3 --> SHAP["reports/shap_explanations/"]
+    SHAP --> P4["generate_shap_report"]
+    P4 --> PDF["reports/shap_report.pdf"]
+```
+
+### Estágios declarados
+
+| Estágio | Comando | Entradas (deps) | Saídas (outs / metrics) |
+|---|---|---|---|
+| `prepare_data` | `prepare_data.py` | `dados/credicard.csv.gz`, `params.yaml` | `dados/credicard_tratado.parquet` (out), `reports/data_quality_report.json` (métrica) |
+| `train_model` | `train_model.py` | parquet tratado, `params.yaml` | `models/model.pkl`, `models/model_metadata.json` (outs), `metrics.json` (métrica) |
+| `generate_shap_insights` | `generate_shap_insights.py` | modelo, metadados, parquet tratado, `params.yaml` | `reports/shap_explanations/` (out, `persist: true`) |
+| `generate_shap_report` | `generate_shap_report.py` | `reports/shap_explanations/` | `reports/shap_report.pdf` (out) |
+
+**Convenção de versionamento:** artefatos pesados (dados, modelo, SHAP) são gravados no DVC e **nunca** no Git. Métricas leves (`cache: false`) permanecem no Git para auditoria direta em qualquer clone.
 
 ---
 
 ## 🤖 Algoritmos e Técnicas Utilizadas
 
-### Algoritmos Principais
-- **XGBoost**  
-- **Logistic Regression**  
-- **Random Forest**  
-- **Support Vector Classifier (SVC)**  
+**Modelo operacional**
+- **XGBoost** (`max_depth=7`, `n_estimators=300`, `learning_rate=0.1`, `scale_pos_weight` automático)
 
-### Técnicas de Balanceamento
+**Algoritmos avaliados na fase experimental**
+- Logistic Regression, Random Forest, Support Vector Classifier (SVC)
+
+**Técnicas de balanceamento exploradas**
 - Under-sampling: RandomUnderSampler, ClusterCentroids, NearMiss
 - Over-sampling: RandomOverSampler, SMOTE
 
-### Outras Técnicas
-- Normalização de dados  
-- Cross-validation  
-- GridSearchCV para otimização de hiperparâmetros  
-- Curva Precision-Recall (PR AUC)  
-- Rastreamento de experimentos com MLflow  
-- **SHAP para explainability** ← NOVO!
+**Outras técnicas**
+- Normalização: `MinMaxScaler` (Time) + `PowerTransformer Yeo-Johnson` (Amount)
+- Validação cruzada estratificada de 10 folds
+- `GridSearchCV` para otimização de hiperparâmetros
+- Busca automática de threshold por *business gap* ponderado
+- Rastreamento de experimentos com MLflow
+- **SHAP** para explainability
 
 ---
 
-## 🚀 MLOps e Infraestrutura Profissional
+## 🚀 MLOps e Infraestrutura
 
-O modelo utiliza uma base sólida de MLOps para garantir reprodutibilidade, rastreabilidade e clareza de evolução técnica do ciclo de vida do modelo.
-
-- **Versionamento com DVC:** dados, modelo treinado e artefatos derivados podem ser reconstruídos e sincronizados com storage remoto.
-- **MLflow + DagsHub:** experimentos históricos, métricas e modelos ficam registrados para análise comparativa e auditoria técnica.
-- **GitHub Actions:** o pipeline automatizado executa `dvc pull` e testes para verificar integridade mínima do repositório.
-- **Releases versionadas:** a linha do tempo do modelo está publicada para separar explicitamente a entrega original das atualizações posteriores.
-- **SHAP explainability:** o pipeline prevê a geração de artefatos explicativos e relatório executivo para interpretação do comportamento do modelo.
-
-> **Nota de transparência:** o melhor score histórico do modelo já está registrado nos notebooks/artefatos de experimentação. A trilha atual de evolução do repositório busca tornar esse mesmo desempenho totalmente reproduzível também no pipeline operacional automatizado.
+- **Versionamento com DVC:** dados, modelo e explicações SHAP são reconstruíveis via `dvc pull` / `dvc repro`; o [dvc.lock](dvc.lock) é a fonte de verdade dos hashes.
+- **Reprodutibilidade com versões fixas:** [requirements.txt](requirements.txt) usa `==` em todas as dependências e a CI roda em Python 3.12.
+- **MLflow + DagsHub:** experimentos históricos, métricas e modelos registrados publicamente para auditoria técnica.
+- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala dependências fixadas, valida o grafo (`pip check`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
+- **Releases versionadas ([publish-release.yml](.github/workflows/publish-release.yml)):** separam explicitamente a entrega original das atualizações posteriores.
+- **Serviço de inferência:** interface CLI versionada em [src/serving/cli.py](src/serving/cli.py), com validação de contrato *fail-closed*.
 
 ---
 
 ## 🔍 SHAP Explainability
 
-O modelo inclui explicações completas usando SHAP (SHapley Additive exPlanations):
+Artefatos gerados por `generate_shap_insights` e consolidados por `generate_shap_report`:
 
-### 📊 Artefatos Gerados:
-- **Summary Plots:** Visualização da importância global das features
-- **Feature Importance:** Ranking das features mais importantes
-- **Dependence Plots:** Relação entre features e suas contribuições
-- **Force Plots:** Explicações individuais para previsões específicas
-- **Relatório PDF Automático:** Relatório executivo para stakeholders ← NOVO!
+- **Summary Plots** — importância global das features
+- **Feature Importance / Ranking** — ordenação por contribuição
+- **Dependence Plots** — relação entre valor da feature e impacto
+- **Force Plots** — explicação individual por transação
+- **Relatório PDF executivo** — síntese para stakeholders
 
-### 🎯 Insights Obtidos:
-- **Top 5 Features:** V14, V12, V10, V16, V17 (mais influentes para detecção de fraude)
-- **Direção do Impacto:** Como cada feature influencia a previsão de fraude
-- **Transparência:** Explicações completas para compliance regulatório
+**Insights (última execução auditada):** feature mais relevante = **V14**; top features incluem **V12, V10, V16, V17** (configurado para ranquear as 6 principais).
 
 ---
 
-## 📂 Estrutura do Modelo
+## 📂 Estrutura do Repositório
 
 ```text
 Modelo_de_Deteccao_de_Fraude-Financeiro/
-├── .dvc/                       # Configurações do DVC
-├── .github/workflows/          # CI/CD com GitHub Actions
-│   ├── ci-tests.yml            # Pipeline de testes automatizados
-│   └── publish-release.yml     # Publicação automática de releases
-├── .dvcignore                  # Arquivos ignorados pelo DVC
-├── .gitignore                  # Arquivos ignorados pelo Git
-├── dados/                      # Dados versionados com DVC
-│   ├── credicard.csv.gz.dvc    # Ponteiro para dados originais
-│   └── .gitignore              # Ignora arquivos de dados
-├── mlruns/                     # Experimentos do MLflow
-├── models/                     # Modelos versionados
-│   ├── best_model_xgboost.reference.json  # Referência histórica do melhor modelo promovido
-│   └── .gitignore              # Ignora apenas os artefatos operacionais gerados
-├── notebooks/                  # Jupyter notebooks
-│   ├── 01_777_Initial_Model.ipynb
-│   ├── 02_777_Alg_ML_unbalanced.ipynb
-│   ├── 03_777_Alg_ML_USamp.ipynb
-│   ├── 04_777_Alg_ML_OSamp.ipynb
-│   ├── 05_777_Alg_ML_normalization.ipynb
-│   ├── 06_777_Alg_ML_Cross_validation.ipynb
-│   ├── 07_777_Alg_ML_Parameters.ipynb
-│   ├── 08_777_Model_Extension_pkl.ipynb
-│   ├── 09_777_MLFlow_Deployment.ipynb
-│   └── Prediction_Fraud_Test_New_Data.ipynb
-├── reports/                    # Gerado por `dvc repro` quando o pipeline completo e os artefatos locais estão disponíveis
-│   ├── shap_explanations/      # Explicações SHAP versionadas
-│   │   ├── shap_summary_plot.png
-│   │   ├── shap_feature_importance.png
-│   │   ├── shap_values.csv
-│   │   ├── shap_stats.json
-│   │   ├── shap_force_plot.html
-│   │   ├── feature_importance_ranking.csv
-│   │   └── dependence_plots/
-│   └── shap_report.pdf         # Relatório executivo em PDF
-├── src/                        # Código fonte
-│   └── config/
-│       ├── __init__.py
-│       ├── auxiliares.py
-│       ├── auxiliares_ml.py
-│       ├── graficos.py
-│       ├── modelos.py
-│       ├── paths.py
-│       ├── prepare_data.py
-│       ├── train_model.py
-│       ├── generate_shap_insights.py     
-│       ├── generate_shap_report.py       
-│       └── .gitkeep
-├── tests/                      # Testes automatizados
-│   ├── test_basic.py
-│   ├── test_data.py
-│   ├── test_model.py
-│   ├── test_modelos_module.py
-│   ├── .dvcignore
+├── .dvc/                                  # Configuração do DVC (config.local fora do Git)
+├── .github/workflows/
+│   ├── ci-tests.yml                       # Testes + gate de idempotência do DVC
+│   └── publish-release.yml                # Publicação automática de releases
+├── .dvcignore                             # Padrões ignorados pelo DVC
+├── .gitignore                             # Padrões ignorados pelo Git
+├── dados/                                 # Dados versionados pelo DVC
+│   ├── credicard.csv.gz.dvc               # Ponteiro do dado bruto
 │   └── .gitignore
-├── LICENSE.md                  # Licença MIT
-├── README.md                   # Este arquivo
-├── conftest.py                 # Configuração do pytest
-├── dvc.lock                    # Lock file do DVC
-├── dvc.yaml                    # Pipeline do DVC
-├── metrics.json                # Gerado/atualizado pelo estágio de treino
-└── requirements.txt            # Dependências do modelo
+├── docs/
+│   ├── environment-setup.md               # Setup limpo de ambiente
+│   ├── evaluator-guide.md                 # Passo a passo para o avaliador
+│   └── release-update-draft.md            # Draft da release de atualização
+├── models/
+│   ├── best_model_xgboost.reference.json  # Referência histórica (versionada no Git)
+│   └── .gitignore
+├── notebooks/                             # Histórico de experimentação (10 notebooks)
+├── reports/
+│   ├── data_quality_report.json           # Métrica do DVC (cache: false)
+│   ├── mlflow_public_registry_summary.json
+│   ├── production_readiness_scorecard.json
+│   ├── shap_explanations/                 # Out do DVC (persist: true)
+│   ├── shap_report.pdf                    # Out do DVC
+│   └── .gitignore
+├── src/
+│   ├── config/
+│   │   ├── __init__.py
+│   │   ├── paths.py                       # Fonte única de caminhos do projeto
+│   │   ├── prepare_data.py                # Estágio 1: saneamento e transformação
+│   │   ├── train_model.py                 # Estágio 2: CV, calibração e gate de aceite
+│   │   ├── generate_shap_insights.py      # Estágio 3: SHAP
+│   │   ├── generate_shap_report.py        # Estágio 4: relatório PDF
+│   │   ├── generate_mlflow_public_summary.py
+│   │   ├── generate_production_readiness_scorecard.py
+│   │   ├── modelos.py
+│   │   ├── auxiliares.py
+│   │   ├── auxiliares_ml.py
+│   │   └── graficos.py
+│   └── serving/
+│       ├── __init__.py
+│       ├── inference.py                   # Carga do bundle, validação e previsão
+│       └── cli.py                          # Interface oficial de inferência
+├── tests/                                 # 33 testes automatizados
+├── LICENSE.md
+├── README.md
+├── conftest.py                            # Garante o projeto no sys.path nos testes
+├── dvc.lock                               # Hashes dos 4 estágios
+├── dvc.yaml                               # Definição do pipeline
+├── metrics.json                           # Métrica do DVC (cache: false)
+├── params.yaml                            # Parâmetros oficiais (inclui SEED = 42)
+├── pytest.ini
+└── requirements.txt                       # Dependências com versões fixadas
 ```
 
-> **Convenção atual de artefatos:** o pipeline DVC treina e usa `models/model.pkl` como saída operacional. A referência histórica do melhor modelo promovido foi preservada em `models/best_model_xgboost.reference.json`, enquanto o ponteiro DVC legado foi removido do branch atual para eliminar atrito em `dvc pull` e `clone` por terceiros.
-
-## 🔬 Processo de Desenvolvimento
-
-1. Análise Exploratória Inicial  
-2. Modelagem com dados desbalanceados  
-3. Balanceamento (Over/Under-sampling)  
-4. Normalização  
-5. Cross-validation  
-6. Rastreamento de Experimentos com MLflow  
-7. Seleção do Melhor Modelo a partir do Histórico de Experimentos  
-8. Registro do Modelo no MLflow Model Registry
-9. Explainability com SHAP
-10. Geração de Relatórios Automáticos
+> **Convenção de artefatos:** o pipeline operacional usa `models/model.pkl`. A referência histórica do melhor modelo experimental é preservada em `models/best_model_xgboost.reference.json`, sem ponteiro DVC órfão.
 
 ---
 
-## 💻 Instalação e Uso
+## 💻 Como Reproduzir
 
 ### Pré-requisitos
-- Python 3.8+
-- pip
-- git
-- DVC (`pip install dvc`)
 
-### Passos
+- **Python 3.12** (exigido por `xgboost==3.3.0` / `shap==0.52.0`)
+- `git`, `pip`
+- Acesso ao remoto DVC (DagsHub) para `dvc pull`
+
+### Passo a passo
+
 ```bash
-# Clone o repositório
+# 1. Clone o repositório
 git clone https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro.git
 cd Modelo_de_Deteccao_de_Fraude-Financeiro
 
-# Crie ambiente virtual
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
+# 2. Crie e ative o ambiente virtual
+python -m venv .venv
+source .venv/bin/activate      # Linux/macOS
+.venv\Scripts\activate         # Windows (PowerShell)
 
-# Instale dependências
+# 3. Instale as dependências fixadas
 pip install -r requirements.txt
 
-# Baixe os dados e artefatos
+# 4. Baixe dados e artefatos versionados
 dvc pull
 
-# Execute o pipeline completo
+# 5. Reproduza o pipeline completo (idempotente)
 dvc repro
-
-# Ou execute estágios específicos
-dvc repro prepare_data      # Prepara dados
-dvc repro train_model       # Treina modelo
-dvc repro generate_shap_insights  # Gera explicações SHAP
-dvc repro generate_shap_report    # Gera relatório PDF
-
-# Rode testes
-pytest tests/ -v
-
-# Execute notebooks
-jupyter lab
 ```
 
-Se o `dvc pull` solicitar autenticação, configure as credenciais do DagsHub localmente (sem versionar segredos):
+Se o `dvc pull` solicitar autenticação, configure as credenciais localmente (sem versionar segredos):
 
 ```bash
 dvc remote modify --local dagshub auth basic
@@ -268,19 +286,119 @@ dvc remote modify --local dagshub user <seu_usuario_dagshub>
 dvc remote modify --local dagshub password <seu_token_dagshub>
 ```
 
-> **Fluxo zero fricção para avaliadores:** o branch atual foi limpo para que `git clone` + `pip install -r requirements.txt` + `dvc pull` funcione sem depender de ponteiros DVC órfãos. A trilha histórica continua preservada nas tags, notebooks e no arquivo `models/best_model_xgboost.reference.json`.
+### Executando estágios individuais
+
+```bash
+dvc repro prepare_data            # saneamento e transformação
+dvc repro train_model             # treino, calibração e gate de aceite
+dvc repro generate_shap_insights  # explicações SHAP
+dvc repro generate_shap_report    # relatório PDF
+```
+
+### Testes e verificação de reprodutibilidade
+
+```bash
+pytest -q                          # suíte completa (33 testes)
+dvc repro && dvc status            # deve reportar "Data and pipelines are up to date."
+```
+
+> **Interpretando o gate de idempotência:** se a segunda execução de `dvc repro` não alterar nenhum estágio e `dvc status` reportar *up to date*, o ambiente fixado reproduz exatamente os hashes do `dvc.lock` — ou seja, a reprodutibilidade está comprovada.
+
+---
+
+## 🔌 Contrato de Inferência
+
+Interface oficial: **`python -m src.serving.cli`**
+
+```bash
+python -m src.serving.cli \
+  --input dados/credicard_tratado.parquet \
+  --output reports/predictions.csv \
+  --format csv \
+  --limit 100
+```
+
+**Argumentos**
+
+| Argumento | Obrigatório | Descrição |
+|---|---|---|
+| `--input` | Sim | Arquivo `.csv` ou `.parquet` com as features de entrada |
+| `--output` | Sim | Arquivo de saída `.csv` ou `.json` |
+| `--format` | Não | `csv` (padrão) ou `json` |
+| `--limit` | Não | Limita as linhas processadas (útil para smoke tests) |
+
+**Entrada**
+
+- Deve conter **exatamente as 30 features exigidas pelo modelo**: `Time`, `V1` … `V28`, `Amount` (nomes expostos por `model.feature_names_in_`).
+- A coluna `Class` é **ignorada automaticamente** se presente.
+- **Comportamento *fail-closed*:** se qualquer feature obrigatória estiver ausente, a execução **falha com `ValueError`**, em vez de gerar previsões silenciosamente incorretas. Colunas extras são descartadas e a ordem é reordenada conforme o modelo.
+
+**Saída**
+
+| Coluna | Descrição |
+|---|---|
+| `fraud_probability` | Probabilidade de fraude (0–1) |
+| `fraud_prediction` | Decisão binária aplicando o threshold oficial (1 = fraude) |
+| `decision_threshold` | Threshold efetivamente usado na decisão |
+
+**Threshold oficial:** lido de `models/model_metadata.json` (chave `decision_threshold`), garantindo que treino e serving usem o **mesmo ponto de corte** — evitando divergência silenciosa entre avaliação e produção.
+
+---
+
+## 📈 Métricas do Modelo
+
+### Pipeline operacional (reproduzível e auditável)
+
+Valores de `metrics.json` gerados pela última execução do pipeline:
+
+| Métrica | Valor |
+|---|---|
+| Threshold oficial | **0,500** |
+| Precisão (out-of-fold calibrada) | **92,64%** |
+| Recall (out-of-fold calibrado) | **81,91%** |
+| Acurácia | 99,96% |
+| Precisão média (CV 10-fold) | 92,63% |
+| Recall médio (CV 10-fold) | 82,00% |
+| *Business weighted gap* | 0,0164 |
+
+### Gate de aceite (bloqueia regressão)
+
+O treino só é considerado aprovado se **todos** os critérios forem satisfeitos:
+
+| Critério | Limite | Resultado |
+|---|---|---|
+| `min_cv_precision` | ≥ 0,92 | ✅ |
+| `min_cv_recall` | ≥ 0,81 | ✅ |
+| `min_calibrated_precision` | ≥ 0,92 | ✅ |
+| `min_calibrated_recall` | ≥ 0,81 | ✅ |
+| `max_business_weighted_gap` | ≤ 0,02 | ✅ (0,0164) |
+
+**Status do gate: PASS** — `acceptance.passed = true`.
+
+### Baseline de negócio (referência histórica)
+
+| Métrica | Valor | Fonte |
+|---|---|---|
+| Precisão | 92,27% | melhor experimento histórico (MLflow/DagsHub) |
+| Recall | 81,02% | melhor experimento histórico (MLflow/DagsHub) |
+| Acurácia | 99,96% | melhor experimento histórico (MLflow/DagsHub) |
+
+> **Como ler as duas tabelas:** o *baseline histórico* é o alvo de negócio definido em `params.yaml` (`target_precision = 0.9227`, `target_recall = 0.8102`). O *pipeline operacional* é a versão automatizada que reproduz esse patamar de forma auditável, com desvio ponderado de apenas **0,0164** (1,64 p.p.) em relação ao alvo.
+
+---
 
 ## 🧪 Evidências Técnicas
 
-- **Pipeline versionado:** [dvc.yaml](dvc.yaml)
+- **Pipeline versionado:** [dvc.yaml](dvc.yaml) · **[dvc.lock](dvc.lock)**
 - **Integração contínua:** [ci-tests.yml](.github/workflows/ci-tests.yml)
 - **Publicação de releases:** [publish-release.yml](.github/workflows/publish-release.yml)
-- **Melhor experimento histórico:** [09_777_MLFlow_Deployment.ipynb](notebooks/09_777_MLFlow_Deployment.ipynb)
+- **Métricas operacionais:** [metrics.json](metrics.json)
+- **Qualidade dos dados:** [reports/data_quality_report.json](reports/data_quality_report.json)
 - **Resumo público de MLflow/DagsHub:** [mlflow_public_registry_summary.json](reports/mlflow_public_registry_summary.json)
 - **Scorecard de prontidão:** [production_readiness_scorecard.json](reports/production_readiness_scorecard.json)
+- **Experimentação histórica:** [09_777_MLFlow_Deployment.ipynb](notebooks/09_777_MLFlow_Deployment.ipynb)
 - **Experimentos públicos no DagsHub:** [Experiments](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/experiments)
 - **Modelo público registrado no DagsHub:** [Models](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/models)
-- **Modelo e dados via DVC/DagsHub:** [DagsHub](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro)
 
 ## 🌐 MLflow e DagsHub Públicos
 
@@ -290,81 +408,78 @@ dvc remote modify --local dagshub password <seu_token_dagshub>
 - **Execuções visíveis para avaliadores:** `7` runs públicos no DagsHub
 - **Registry público visível:** `1` modelo registrado publicamente no DagsHub
 
+---
+
 ## 🧭 Guia do Avaliador
 
-- **Passo a passo objetivo:** [docs/evaluator-guide.md](docs/evaluator-guide.md)
+### Avaliação em 3 minutos
+
+1. Leia a [Arquitetura e Pipeline DVC](#-arquitetura-e-pipeline-dvc) deste README.
+2. Abra [dvc.yaml](dvc.yaml) e [params.yaml](params.yaml) para ver o contrato do pipeline e os parâmetros.
+3. Consulte [metrics.json](metrics.json) e confirme `acceptance.passed = true`.
+4. Verifique a suíte automatizada em [.github/workflows/ci-tests.yml](.github/workflows/ci-tests.yml).
+5. Abra os [Experiments](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/experiments) e os [Models](https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/models) públicos no DagsHub.
+
+### Documentos de apoio
+
+- **Passo a passo detalhado:** [docs/evaluator-guide.md](docs/evaluator-guide.md)
 - **Setup limpo de ambiente:** [docs/environment-setup.md](docs/environment-setup.md)
-- **Draft da release final:** [docs/release-update-draft.md](docs/release-update-draft.md)
-- **Interface oficial de inferência:** `python -m src.serving.cli`
-- **Critério operacional do modelo:** threshold oficial salvo em `models/model_metadata.json`
-
-## ✨ Diferenciais do Modelo
-
-- Linha do tempo pública com **releases** que preservam a entrega original e as atualizações posteriores
-- Base consistente de **MLOps aplicado** com DVC, MLflow/DagsHub e GitHub Actions
-- Melhor experimento histórico alinhado ao objetivo de negócio de **alta precisão com recall competitivo**
-- Trilha metodológica completa, do baseline até ajuste de hiperparâmetros e deployment experimental
-- Explainability com **SHAP** e geração de artefatos interpretáveis para análise técnica e executiva
-- Estrutura pronta para evolução em direção a **production readiness** sem apagar a história do projeto
+- **Draft da release de atualização:** [docs/release-update-draft.md](docs/release-update-draft.md)
 
 ---
 
-## 📈 Resultados e Conclusão
+## ✨ Diferenciais do Projeto
 
-| Métrica   | Valor (%) |
-|-----------|-----------|
-| Acurácia  | 99,96     |
-| Precisão  | 92,27     |
-| Recall    | 81,02     |
-
-O modelo final alcança um equilíbrio estratégico entre **detecção eficaz de fraudes** e **minimização de falsos positivos**, com explicações completas via **SHAP** para transparência total.
-
-> **Contexto das métricas:** estes valores representam o melhor experimento histórico documentado no projeto e servem como baseline de negócio para a evolução do modelo. O pipeline operacional atual segue sendo endurecido para reproduzir esse patamar de forma automatizada e auditável.
-
----
-
-## 🎯 Insights do SHAP
-
-- **Feature mais importante:** V14 (importância: 1.1781)
-- **Top 5 features:** V14, V12, V10, V16, V17
-- **Impacto direcional:** Features específicas aumentam/diminuem probabilidade de fraude
+- **Pipeline DVC idempotente** com 4 estágios, hashes íntegros e gate de reprodutibilidade na CI.
+- **Ambiente 100% reproduzível** — versões fixadas e Python 3.12 alinhado entre desenvolvimento e CI.
+- **Determinismo explícito** — `SEED = 42` único em todas as etapas estocásticas.
+- **Gate de aceite por métrica de negócio** — o treino falha se a precisão/recall caírem abaixo do alvo.
+- **Serving com contrato *fail-closed*** — não há "falha silenciosa": entradas ambíguas derrubam o processo.
+- **Explainability completa (SHAP)** com relatório executivo em PDF.
+- **Histórico preservado** — a entrega original permanece nas tags `snapshot` e `v1.0.0`.
 
 ---
 
 ## 🎯 Interpretação das Métricas
 
-- **Alta Precisão (92,27%)** → garante que poucas transações legítimas sejam bloqueadas.  
-- **Recall Moderado (81,02%)** → captura a maioria das fraudes, aceitando pequena perda em prol da experiência do cliente.  
-- **Alta Acurácia (99,96%)** → consistente, mas menos relevante em datasets desbalanceados.
-- **Explicabilidade Completa** → transparência total nas decisões do modelo
+- **Alta Precisão (~92,6%)** → poucas transações legítimas são bloqueadas; reduz atrito com o cliente e custo de atendimento.
+- **Recall (~81,9%)** → captura a maior parte das fraudes, aceitando uma perda controlada em favor da experiência do cliente.
+- **Acurácia (~99,96%)** → alta, porém pouco informativa isoladamente em datasets com 0,17% de positivos.
+- **Threshold calibrado por *business gap*** → o ponto de corte é escolhido minimizando um erro ponderado (precisão com peso 2×), não o padrão 0,5 por inércia.
+
+---
+
+## 🏷️ Releases
+
+- [snapshot — Entrega original (referência)](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/snapshot)
+- [v1.0.0 — Entrega original do modelo](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.0.0)
+- [v1.1.0 — Rename + DagsHub/DVC/CI](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.1.0)
+- [v1.2.0 — Production Hardening Update](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.2.0)
+
+> A entrega histórica segue explicitamente preservada pelas tags `snapshot` e `v1.0.0`; nenhum commit do histórico original foi reescrito.
 
 ---
 
 ## 🛣️ Roadmap
 
-- **Fase 1 — Diagnóstico e Baseline:** concluída
-- **Fase 2 — Alinhamento de Narrativa Pública:** concluída
-- **Fase 3 — Higienização e Organização Técnica:** concluída
-- **Fase 4 — Reprodutibilidade do Melhor Modelo:** concluída
-- **Fase 5 — Hardening de Dados e Modelo:** concluída
-- **Fase 6 — Testes de Produção:** concluída
-- **Fase 7 — Serving e Prontidão para Deploy:** concluída
-- **Fase 8 — MLflow e DagsHub Profissionais:** concluída
-- **Fase 9 — Polimento Final:** concluída
-- **Fase 10 — Entrega Oficial do Update:** publicar novo release profissional sem tocar no histórico antigo
+- **Fases 1–9** — Diagnóstico, narrativa, higienização, reprodutibilidade, hardening, testes, serving, MLflow/DagsHub e polimento: concluídas
+- **Fase 10 — Entrega Oficial do Update:** concluída (release v1.2.0)
+- **Fase 11 — Reprodutibilidade de Nível Sênior:** versões fixadas, Python 3.12 na CI, gate de idempotência do DVC, `mlruns` fora do Git e README reconstruído
 
 ---
 
 ## 📜 Licença
 
-Este repositório está licenciado sob a Licença MIT. Consulte o arquivo [LICENSE.md](LICENSE.md).
+Este repositório está licenciado sob a **Licença MIT**. Consulte [LICENSE.md](LICENSE.md).
 
 ---
 
-## 📬 Contato
+<h2 align="center">📬 Contato</h2>
 
-Se tiver alguma dúvida, sugestão ou quiser colaborar, sinta-se à vontade para entrar em contato:
-- **Nome:** Flávio Henrique Barbosa  
-- **LinkedIn:** [Flávio Henrique Barbosa | LinkedIn](https://www.linkedin.com/in/fl%C3%A1vio-henrique-barbosa-38465938) 
-- **Email:** flaviohenriquehb777@outlook.com  
-- **DagsHub:** https://dagshub.com/flaviohenriquehb777  
+<div align="center">
+
+| Nome | LinkedIn | E-mail | DagsHub |
+|:---:|:---:|:---:|:---:|
+| Flávio Henrique Barbosa | [flávio-henrique-barbosa](https://www.linkedin.com/in/fl%C3%A1vio-henrique-barbosa-38465938) | [flaviohenriquehb777@outlook.com](mailto:flaviohenriquehb777@outlook.com) | [flaviohenriquehb777](https://dagshub.com/flaviohenriquehb777) |
+
+</div>

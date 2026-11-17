@@ -5,32 +5,31 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Set up Python 3.9
+    # Python 3.12: exigido por xgboost 3.3 e shap 0.52 (requires-python >= 3.12).
+    # Deve ser o mesmo interpretador usado para gerar o dvc.lock.
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.12'
         cache: 'pip'
 
+    # Todas as versoes (inclusive dvc) vem fixadas do requirements.txt.
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest
+        pip install pytest==9.1.0
 
     - name: Validate dependencies
       run: |
         python -m pip check
-
-    - name: Install DVC
-      run: |
-        pip install dvc
 
     - name: Configure DVC with DagsHub
       run: |
@@ -49,8 +48,13 @@ jobs:
       run: |
         pytest -q
 
+    # Gate de reprodutibilidade: o pipeline deve ficar "up to date" apos um repro.
+    # Isso prova que o ambiente fixado reproduz exatamente os hashes do dvc.lock.
     - name: Test DVC reproducibility
       run: |
-        echo "Verificando se DVC está configurado corretamente..."
         dvc status
+        dvc repro
+        STATUS="$(dvc status)"
+        echo "$STATUS"
+        echo "$STATUS" | grep -q "up to date" || { echo "::error::Pipeline DVC nao e idempotente apos dvc repro"; exit 1; }
         dvc version
