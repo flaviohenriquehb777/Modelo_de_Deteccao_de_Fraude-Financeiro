@@ -12,6 +12,7 @@
 
 <p align="center">
 <img src="https://img.shields.io/badge/Python-3.12-blue.svg" alt="Python 3.12">
+<img src="https://img.shields.io/badge/uv-0.12.5-de5fe9" alt="uv">
 <img src="https://img.shields.io/badge/Depend%C3%AAncias-Fixadas%20(==)-success" alt="Dependências fixadas">
 <img src="https://img.shields.io/badge/Testes-33%20passando-brightgreen" alt="Testes">
 <img src="https://img.shields.io/badge/SEED-42-informational" alt="SEED 42">
@@ -48,7 +49,7 @@
 ## 🧭 Status Atual
 
 - **Reprodutibilidade verificada:** `dvc repro` executa os 4 estágios e, na segunda execução, retorna `Data and pipelines are up to date.` (pipeline idempotente).
-- **Dependências fixadas:** todas as bibliotecas têm versão exata (`==`) em [requirements.txt](requirements.txt), geradas a partir do ambiente que produziu o [dvc.lock](dvc.lock).
+- **Ambiente reprodutível com uv:** as dependências têm versão exata (`==`) no [pyproject.toml](pyproject.toml) e o [uv.lock](uv.lock) congela o grafo transitivo com hashes; `uv sync` recria o ambiente idêntico ao que produziu o [dvc.lock](dvc.lock). O [requirements.txt](requirements.txt) é mantido apenas como espelho para `pip`.
 - **Python 3.12:** exigido por `xgboost==3.3.0` e `shap==0.52.0` (`requires-python >= 3.12`). A CI roda no mesmo interpretador usado para gerar o lock.
 - **Determinismo:** `SEED = 42` aplicado na validação cruzada, no XGBoost e no SHAP. O preparo de dados é determinístico por construção.
 - **Gate de aceite automatizado:** o treino só é aprovado se atingir os critérios de negócio de precisão/recall (ver [Métricas do Modelo](#-métricas-do-modelo)).
@@ -67,12 +68,16 @@ Modelo de Machine Learning para identificar transações financeiras fraudulenta
 
 Base pública de transações de cartão de crédito anonimizadas por PCA (referência *Credit Card Fraud Detection*):
 
+<div align="center">
+
 | Característica | Valor (auditado em `reports/data_quality_report.json`) |
-|---|---|
+|:---:|:---:|
 | Transações (linhas) | 284.807 |
 | Colunas | 31 |
 | Valores nulos | 0 |
 | Taxa de fraude | 0,173% (desbalanceamento extremo) |
+
+</div>
 
 Colunas principais:
 
@@ -128,12 +133,16 @@ flowchart TD
 
 ### Estágios declarados
 
+<div align="center">
+
 | Estágio | Comando | Entradas (deps) | Saídas (outs / metrics) |
-|---|---|---|---|
+|:---:|:---:|:---:|:---:|
 | `prepare_data` | `prepare_data.py` | `dados/credicard.csv.gz`, `params.yaml` | `dados/credicard_tratado.parquet` (out), `reports/data_quality_report.json` (métrica) |
 | `train_model` | `train_model.py` | parquet tratado, `params.yaml` | `models/model.pkl`, `models/model_metadata.json` (outs), `metrics.json` (métrica) |
 | `generate_shap_insights` | `generate_shap_insights.py` | modelo, metadados, parquet tratado, `params.yaml` | `reports/shap_explanations/` (out, `persist: true`) |
 | `generate_shap_report` | `generate_shap_report.py` | `reports/shap_explanations/` | `reports/shap_report.pdf` (out) |
+
+</div>
 
 **Convenção de versionamento:** artefatos pesados (dados, modelo, SHAP) são gravados no DVC e **nunca** no Git. Métricas leves (`cache: false`) permanecem no Git para auditoria direta em qualquer clone.
 
@@ -164,9 +173,9 @@ flowchart TD
 ## 🚀 MLOps e Infraestrutura
 
 - **Versionamento com DVC:** dados, modelo e explicações SHAP são reconstruíveis via `dvc pull` / `dvc repro`; o [dvc.lock](dvc.lock) é a fonte de verdade dos hashes.
-- **Reprodutibilidade com versões fixas:** [requirements.txt](requirements.txt) usa `==` em todas as dependências e a CI roda em Python 3.12.
+- **Reprodutibilidade com versões fixas:** o ambiente é gerenciado pelo [uv](https://docs.astral.sh/uv/) — versões `==` no [pyproject.toml](pyproject.toml) e hashes no [uv.lock](uv.lock); a CI sincroniza com `uv sync --frozen` em Python 3.12.
 - **MLflow + DagsHub:** experimentos históricos, métricas e modelos registrados publicamente para auditoria técnica.
-- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala dependências fixadas, valida o grafo (`pip check`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
+- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala o ambiente com `uv sync --frozen`, valida as dependências (`uv pip check`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
 - **Releases versionadas ([publish-release.yml](.github/workflows/publish-release.yml)):** separam explicitamente a entrega original das atualizações posteriores.
 - **Serviço de inferência:** interface CLI versionada em [src/serving/cli.py](src/serving/cli.py), com validação de contrato *fail-closed*.
 
@@ -240,8 +249,11 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 ├── dvc.yaml                               # Definição do pipeline
 ├── metrics.json                           # Métrica do DVC (cache: false)
 ├── params.yaml                            # Parâmetros oficiais (inclui SEED = 42)
+├── pyproject.toml                         # Metadados e dependências (PEP 621)
+├── uv.lock                                # Lock reprodutível (transitivas + hashes)
+├── .python-version                        # Python fixado (3.12)
 ├── pytest.ini
-└── requirements.txt                       # Dependências com versões fixadas
+└── requirements.txt                       # Dependências (espelho para pip)
 ```
 
 > **Convenção de artefatos:** o pipeline operacional usa `models/model.pkl`. A referência histórica do melhor modelo experimental é preservada em `models/best_model_xgboost.reference.json`, sem ponteiro DVC órfão.
@@ -252,8 +264,9 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 
 ### Pré-requisitos
 
-- **Python 3.12** (exigido por `xgboost==3.3.0` / `shap==0.52.0`)
-- `git`, `pip`
+- **Python 3.12** (exigido por `xgboost==3.3.0` / `shap==0.52.0`; fixado em [.python-version](.python-version))
+- [**uv**](https://docs.astral.sh/uv/) — gerenciador de ambiente e dependências
+- `git`
 - Acesso ao remoto DVC (DagsHub) para `dvc pull`
 
 ### Passo a passo
@@ -263,43 +276,41 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 git clone https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro.git
 cd Modelo_de_Deteccao_de_Fraude-Financeiro
 
-# 2. Crie e ative o ambiente virtual
-python -m venv .venv
-source .venv/bin/activate      # Linux/macOS
-.venv\Scripts\activate         # Windows (PowerShell)
+# 2. Sincronize o ambiente a partir do lock (cria .venv e instala tudo)
+uv sync
 
-# 3. Instale as dependências fixadas
-pip install -r requirements.txt
+# 3. Baixe dados e artefatos versionados
+uv run dvc pull
 
-# 4. Baixe dados e artefatos versionados
-dvc pull
-
-# 5. Reproduza o pipeline completo (idempotente)
-dvc repro
+# 4. Reproduza o pipeline completo (idempotente)
+uv run dvc repro
 ```
+
+> **Alternativa com pip:** o `requirements.txt` é mantido como espelho das dependências
+> fixadas. Nesse caso use `python -m venv .venv && pip install -r requirements.txt`.
 
 Se o `dvc pull` solicitar autenticação, configure as credenciais localmente (sem versionar segredos):
 
 ```bash
-dvc remote modify --local dagshub auth basic
-dvc remote modify --local dagshub user <seu_usuario_dagshub>
-dvc remote modify --local dagshub password <seu_token_dagshub>
+uv run dvc remote modify --local dagshub auth basic
+uv run dvc remote modify --local dagshub user <seu_usuario_dagshub>
+uv run dvc remote modify --local dagshub password <seu_token_dagshub>
 ```
 
 ### Executando estágios individuais
 
 ```bash
-dvc repro prepare_data            # saneamento e transformação
-dvc repro train_model             # treino, calibração e gate de aceite
-dvc repro generate_shap_insights  # explicações SHAP
-dvc repro generate_shap_report    # relatório PDF
+uv run dvc repro prepare_data            # saneamento e transformação
+uv run dvc repro train_model             # treino, calibração e gate de aceite
+uv run dvc repro generate_shap_insights  # explicações SHAP
+uv run dvc repro generate_shap_report    # relatório PDF
 ```
 
 ### Testes e verificação de reprodutibilidade
 
 ```bash
-pytest -q                          # suíte completa (33 testes)
-dvc repro && dvc status            # deve reportar "Data and pipelines are up to date."
+uv run pytest -q                        # suíte completa (33 testes)
+uv run dvc repro && uv run dvc status   # deve reportar "Data and pipelines are up to date."
 ```
 
 > **Interpretando o gate de idempotência:** se a segunda execução de `dvc repro` não alterar nenhum estágio e `dvc status` reportar *up to date*, o ambiente fixado reproduz exatamente os hashes do `dvc.lock` — ou seja, a reprodutibilidade está comprovada.
@@ -311,7 +322,7 @@ dvc repro && dvc status            # deve reportar "Data and pipelines are up to
 Interface oficial: **`python -m src.serving.cli`**
 
 ```bash
-python -m src.serving.cli \
+uv run python -m src.serving.cli \
   --input dados/credicard_tratado.parquet \
   --output reports/predictions.csv \
   --format csv \
@@ -320,12 +331,16 @@ python -m src.serving.cli \
 
 **Argumentos**
 
+<div align="center">
+
 | Argumento | Obrigatório | Descrição |
-|---|---|---|
+|:---:|:---:|:---:|
 | `--input` | Sim | Arquivo `.csv` ou `.parquet` com as features de entrada |
 | `--output` | Sim | Arquivo de saída `.csv` ou `.json` |
 | `--format` | Não | `csv` (padrão) ou `json` |
 | `--limit` | Não | Limita as linhas processadas (útil para smoke tests) |
+
+</div>
 
 **Entrada**
 
@@ -335,11 +350,15 @@ python -m src.serving.cli \
 
 **Saída**
 
+<div align="center">
+
 | Coluna | Descrição |
-|---|---|
+|:---:|:---:|
 | `fraud_probability` | Probabilidade de fraude (0–1) |
 | `fraud_prediction` | Decisão binária aplicando o threshold oficial (1 = fraude) |
 | `decision_threshold` | Threshold efetivamente usado na decisão |
+
+</div>
 
 **Threshold oficial:** lido de `models/model_metadata.json` (chave `decision_threshold`), garantindo que treino e serving usem o **mesmo ponto de corte** — evitando divergência silenciosa entre avaliação e produção.
 
@@ -351,8 +370,10 @@ python -m src.serving.cli \
 
 Valores de `metrics.json` gerados pela última execução do pipeline:
 
+<div align="center">
+
 | Métrica | Valor |
-|---|---|
+|:---:|:---:|
 | Threshold oficial | **0,500** |
 | Precisão (out-of-fold calibrada) | **92,64%** |
 | Recall (out-of-fold calibrado) | **81,91%** |
@@ -361,27 +382,37 @@ Valores de `metrics.json` gerados pela última execução do pipeline:
 | Recall médio (CV 10-fold) | 82,00% |
 | *Business weighted gap* | 0,0164 |
 
+</div>
+
 ### Gate de aceite (bloqueia regressão)
 
 O treino só é considerado aprovado se **todos** os critérios forem satisfeitos:
 
+<div align="center">
+
 | Critério | Limite | Resultado |
-|---|---|---|
+|:---:|:---:|:---:|
 | `min_cv_precision` | ≥ 0,92 | ✅ |
 | `min_cv_recall` | ≥ 0,81 | ✅ |
 | `min_calibrated_precision` | ≥ 0,92 | ✅ |
 | `min_calibrated_recall` | ≥ 0,81 | ✅ |
 | `max_business_weighted_gap` | ≤ 0,02 | ✅ (0,0164) |
 
+</div>
+
 **Status do gate: PASS** — `acceptance.passed = true`.
 
 ### Baseline de negócio (referência histórica)
 
+<div align="center">
+
 | Métrica | Valor | Fonte |
-|---|---|---|
+|:---:|:---:|:---:|
 | Precisão | 92,27% | melhor experimento histórico (MLflow/DagsHub) |
 | Recall | 81,02% | melhor experimento histórico (MLflow/DagsHub) |
 | Acurácia | 99,96% | melhor experimento histórico (MLflow/DagsHub) |
+
+</div>
 
 > **Como ler as duas tabelas:** o *baseline histórico* é o alvo de negócio definido em `params.yaml` (`target_precision = 0.9227`, `target_recall = 0.8102`). O *pipeline operacional* é a versão automatizada que reproduz esse patamar de forma auditável, com desvio ponderado de apenas **0,0164** (1,64 p.p.) em relação ao alvo.
 
@@ -431,7 +462,7 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 ## ✨ Diferenciais do Projeto
 
 - **Pipeline DVC idempotente** com 4 estágios, hashes íntegros e gate de reprodutibilidade na CI.
-- **Ambiente 100% reproduzível** — versões fixadas e Python 3.12 alinhado entre desenvolvimento e CI.
+- **Ambiente 100% reproduzível com uv** — lock com hashes, versões fixadas e Python 3.12 alinhado entre desenvolvimento e CI.
 - **Determinismo explícito** — `SEED = 42` único em todas as etapas estocásticas.
 - **Gate de aceite por métrica de negócio** — o treino falha se a precisão/recall caírem abaixo do alvo.
 - **Serving com contrato *fail-closed*** — não há "falha silenciosa": entradas ambíguas derrubam o processo.
@@ -466,6 +497,7 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 - **Fases 1–9** — Diagnóstico, narrativa, higienização, reprodutibilidade, hardening, testes, serving, MLflow/DagsHub e polimento: concluídas
 - **Fase 10 — Entrega Oficial do Update:** concluída (release v1.2.0)
 - **Fase 11 — Reprodutibilidade de Nível Sênior:** concluída (release v1.3.0) — versões fixadas, Python 3.12 na CI, gate de idempotência do DVC, `mlruns` fora do Git e README reconstruído
+- **Fase 12 — Ambiente de nível sênior com uv:** concluída — [pyproject.toml](pyproject.toml) (PEP 621) + [uv.lock](uv.lock) com hashes, Python 3.12 fixado em [.python-version](.python-version) e CI migrada para `uv sync --frozen`
 
 ---
 
