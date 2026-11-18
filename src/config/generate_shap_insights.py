@@ -74,26 +74,32 @@ class FraudSHAPExplainer:
         raw_features = sampled_data.drop("Class", axis=1)
         self.y = sampled_data["Class"]
 
-        self.preprocessor = self._resolve_preprocessor()
+        self.feature_engineer = self._resolve_step("features")
+        self.preprocessor = self._resolve_step("preprocess")
         self.classifier = self._resolve_classifier()
 
         # O artefato de producao e um Pipeline que recebe features BRUTAS. Para o
-        # SHAP precisamos explicar o classificador, entao aplicamos a etapa de
-        # pre-processamento do proprio Pipeline (ajustada no treino) nos dados.
+        # SHAP precisamos explicar o classificador, entao aplicamos as etapas do
+        # proprio Pipeline (engenharia de features + pre-processamento, ajustadas
+        # no treino) na mesma ordem em que o modelo as aplica.
+        engineered_features = raw_features
+        if self.feature_engineer is not None:
+            engineered_features = self.feature_engineer.transform(raw_features)
+
         if self.preprocessor is not None:
-            transformed = self.preprocessor.transform(raw_features)
+            transformed = self.preprocessor.transform(engineered_features)
             feature_names = list(self.preprocessor.get_feature_names_out())
             self.X = pd.DataFrame(transformed, columns=feature_names, index=raw_features.index)
         else:
-            self.X = raw_features
+            self.X = engineered_features
 
         print(f"Dados carregados para explainability: {self.X.shape}")
         print(f"Classificador explicado: {type(self.classifier).__name__}")
 
-    def _resolve_preprocessor(self):
+    def _resolve_step(self, step_name: str):
         steps = getattr(self.pipeline, "named_steps", None)
-        if steps and "preprocess" in steps:
-            return steps["preprocess"]
+        if steps and step_name in steps:
+            return steps[step_name]
         return None
 
     def _resolve_classifier(self):

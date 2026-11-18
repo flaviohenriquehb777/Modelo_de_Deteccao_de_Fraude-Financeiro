@@ -17,6 +17,7 @@ BOOTSTRAP_ROOT = Path(__file__).resolve().parents[2]
 if str(BOOTSTRAP_ROOT) not in sys.path:
     sys.path.insert(0, str(BOOTSTRAP_ROOT))
 
+from src.config.feature_engineering import TemporalFeatureEngineer
 from src.config.paths import MODEL_METADATA_PATH, PIPELINE_MODEL_PATH, PROCESSED_DATA_PATH, PROJECT_ROOT
 
 DEFAULT_THRESHOLD = 0.5
@@ -56,9 +57,22 @@ def build_preprocessor(preprocess_config: dict) -> ColumnTransformer:
     return ColumnTransformer(transformers, remainder="passthrough")
 
 
+def build_feature_engineer(preprocess_config: dict) -> object:
+    """Cria a etapa de engenharia de features (fold-safe) do Pipeline.
+
+    As features derivadas sao calculadas de forma deterministica por linha, sem
+    ajuste a partir dos dados, portanto nao vazam informacao entre os folds.
+    """
+    feature_config = preprocess_config.get("feature_engineering", {}) or {}
+    if feature_config.get("temporal_cyclic", False):
+        return TemporalFeatureEngineer()
+    return "passthrough"
+
+
 def build_pipeline(model_config: dict, preprocess_config: dict) -> Pipeline:
     return Pipeline(
         [
+            ("features", build_feature_engineer(preprocess_config)),
             ("preprocess", build_preprocessor(preprocess_config)),
             ("classifier", XGBClassifier(**model_config)),
         ]
@@ -233,11 +247,22 @@ def train_final_model(X: pd.DataFrame, y: pd.Series, model_config: dict, preproc
     joblib.dump(pipeline, PIPELINE_MODEL_PATH)
 
 
+def describe_pipeline(preprocess_config: dict) -> str:
+    feature_config = preprocess_config.get("feature_engineering", {}) or {}
+    steps = []
+    if feature_config.get("temporal_cyclic", False):
+        steps.append("TemporalFeatureEngineer(hour,hour_sin,hour_cos)")
+    steps.append("ColumnTransformer(PowerTransformer+MinMaxScaler)")
+    steps.append("XGBClassifier")
+    return " + ".join(steps)
+
+
 def save_metrics(
     metrics: dict,
     evaluation_config: dict,
     acceptance_config: dict,
     model_config: dict,
+    preprocess_config: dict,
 ) -> None:
     metrics_payload = {
         "dataset": {
@@ -258,7 +283,7 @@ def save_metrics(
         "model": {
             "artifact_path": str(PIPELINE_MODEL_PATH.relative_to(PROJECT_ROOT)),
             "type": "XGBClassifier",
-            "pipeline": "ColumnTransformer(PowerTransformer+MinMaxScaler) + XGBClassifier",
+            "pipeline": describe_pipeline(preprocess_config),
             "random_state": int(model_config["random_state"]),
             "max_depth": int(model_config["max_depth"]),
             "n_estimators": int(model_config["n_estimators"]),
@@ -293,7 +318,7 @@ def main() -> None:
 
     metrics = evaluate_with_cross_validation(X, y, evaluation_config, model_config, preprocess_config)
     train_final_model(X, y, model_config, preprocess_config)
-    save_metrics(metrics, evaluation_config, acceptance_config, model_config)
+    save_metrics(metrics, evaluation_config, acceptance_config, model_config, preprocess_config)
     save_model_metadata(
         {
             "evaluation": metrics,

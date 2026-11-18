@@ -10,8 +10,8 @@ stages:
       size: 68511515
     - path: params.yaml
       hash: md5
-      md5: f394a6dff4919bc35bcce054ec6a7561
-      size: 1355
+      md5: e6c0acce7d96cbd91204804fa6b48749
+      size: 1551
     - path: src/config/paths.py
       hash: md5
       md5: c5834e747e4bba4152e47a3b1d0034a4
@@ -27,8 +27,8 @@ stages:
       size: 72483046
     - path: reports/data_quality_report.json
       hash: md5
-      md5: 820e1bb0473487dfaddbade72e32e5fc
-      size: 777
+      md5: 3294de94bccafb57b278adb761d19143
+      size: 921
   train_model:
     cmd: python src/config/train_model.py
     deps:
@@ -38,29 +38,29 @@ stages:
       size: 72483046
     - path: params.yaml
       hash: md5
-      md5: f394a6dff4919bc35bcce054ec6a7561
-      size: 1355
+      md5: e6c0acce7d96cbd91204804fa6b48749
+      size: 1551
     - path: src/config/paths.py
       hash: md5
       md5: c5834e747e4bba4152e47a3b1d0034a4
       size: 1266
     - path: src/config/train_model.py
       hash: md5
-      md5: e8e241e7bc78be84eacfdde38785daad
-      size: 12775
+      md5: 09938e2925535db637abee1c9fbfe9b4
+      size: 13831
     outs:
     - path: metrics.json
       hash: md5
-      md5: f9c993e16edc35243df40b1af11a6d93
-      size: 2466
+      md5: a6e57ee9ffa664cf326ad1f850f8beb8
+      size: 2521
     - path: models/model.pkl
       hash: md5
-      md5: 532c45db33e81be93452661d1c9f0e66
-      size: 893922
+      md5: e8e87dba3c9f4f4df2f42304208980f8
+      size: 890273
     - path: models/model_metadata.json
       hash: md5
-      md5: 9dae6ce534dcbcb02168b6a154ccbc00
-      size: 961
+      md5: 778c2c4b51b1772ecda80ff685227dab
+      size: 963
   generate_shap_insights:
     cmd: python src/config/generate_shap_insights.py
     deps:
@@ -70,20 +70,20 @@ stages:
       size: 72483046
     - path: models/model.pkl
       hash: md5
-      md5: 532c45db33e81be93452661d1c9f0e66
-      size: 893922
+      md5: e8e87dba3c9f4f4df2f42304208980f8
+      size: 890273
     - path: models/model_metadata.json
       hash: md5
-      md5: 9dae6ce534dcbcb02168b6a154ccbc00
-      size: 961
+      md5: 778c2c4b51b1772ecda80ff685227dab
+      size: 963
     - path: params.yaml
       hash: md5
-      md5: f394a6dff4919bc35bcce054ec6a7561
-      size: 1355
+      md5: e6c0acce7d96cbd91204804fa6b48749
+      size: 1551
     - path: src/config/generate_shap_insights.py
       hash: md5
-      md5: f66c55bab511ef173057b8997f7af6e4
-      size: 9661
+      md5: 17b151bdffae40f5902b8e1d1a5ebe64
+      size: 9987
     - path: src/config/paths.py
       hash: md5
       md5: c5834e747e4bba4152e47a3b1d0034a4
@@ -91,16 +91,16 @@ stages:
     outs:
     - path: reports/shap_explanations
       hash: md5
-      md5: 78a07278c6d7a96cbb9f4df519fd0091.dir
-      size: 4739725
+      md5: dc3588860c31a25a78577f5515c1bd0f.dir
+      size: 4853059
       nfiles: 19
   generate_shap_report:
     cmd: python src/config/generate_shap_report.py
     deps:
     - path: reports/shap_explanations/
       hash: md5
-      md5: 78a07278c6d7a96cbb9f4df519fd0091.dir
-      size: 4739725
+      md5: dc3588860c31a25a78577f5515c1bd0f.dir
+      size: 4853059
       nfiles: 19
     - path: src/config/generate_shap_report.py
       hash: md5
@@ -113,5 +113,5 @@ stages:
     outs:
     - path: reports/shap_report.pdf
       hash: md5
-      md5: 955bc897910d5b25d3bdedf9ef966a77
-      size: 3413643
+      md5: 6f2555a49e16889b1f6631321a80f845
+      size: 3441947

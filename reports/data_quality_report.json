@@ -4,7 +4,10 @@
   "output_path": "dados/credicard_tratado.parquet",
   "preprocess": {
     "time_scaler": "minmax",
-    "amount_transform": "yeo-johnson"
+    "amount_transform": "yeo-johnson",
+    "feature_engineering": {
+      "temporal_cyclic": true
+    }
   },
   "raw_dataset": {
     "row_count": 284807,
@@ -24,7 +27,10 @@
     "preprocessing_stage": "training_pipeline",
     "preprocess_recipe": {
       "time_scaler": "minmax",
-      "amount_transform": "yeo-johnson"
+      "amount_transform": "yeo-johnson",
+      "feature_engineering": {
+        "temporal_cyclic": true
+      }
     }
   }
 }

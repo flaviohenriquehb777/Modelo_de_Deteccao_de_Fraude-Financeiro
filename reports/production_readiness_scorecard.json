@@ -9,10 +9,10 @@
     "decision_threshold_versioned": true,
     "operational_model_present": true,
     "validation_strategy": "StratifiedKFold",
-    "operating_threshold": 0.61,
-    "calibrated_precision": 0.9236111111111112,
-    "calibrated_recall": 0.8109756097560976,
-    "alignment_score": 0.99740216802168
+    "operating_threshold": 0.565,
+    "calibrated_precision": 0.9237875288683602,
+    "calibrated_recall": 0.8130081300813008,
+    "alignment_score": 0.9950168121819787
   },
   "data_readiness": {
     "quality_report_passed": true,

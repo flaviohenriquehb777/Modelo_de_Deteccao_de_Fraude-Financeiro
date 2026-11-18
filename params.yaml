@@ -2,11 +2,15 @@
 # Parametros oficiais do pipeline DVC.
 # Convencao de determinismo: SEED = 42 em TODAS as etapas estocasticas
 # (validacao cruzada, XGBoost e explainability SHAP). O preparo de dados e
-# deterministico por natureza (MinMaxScaler + PowerTransformer Yeo-Johnson).
+# deterministico por natureza: engenharia de features temporais (row-wise),
+# MinMaxScaler em Time e PowerTransformer Yeo-Johnson em Amount. Toda a
+# transformacao e ajustada DENTRO do Pipeline, por fold (anti-leakage).
 # =============================================================================
 preprocess:
   time_scaler: minmax
   amount_transform: yeo-johnson
+  feature_engineering:
+    temporal_cyclic: true
 
 data_quality:
   minimum_rows: 1000

@@ -8,21 +8,21 @@
     "cv_random_state": 42,
     "default_threshold": 0.5,
     "cv_strategy": "StratifiedKFold",
-    "operating_threshold": 0.61,
+    "operating_threshold": 0.565,
     "cross_validation_mean_metrics": {
-      "accuracy": 0.9995575945021894,
-      "precision": 0.925577532689237,
-      "recall": 0.810938775510204
+      "accuracy": 0.9995611057381446,
+      "precision": 0.9262370337038949,
+      "recall": 0.8129795918367346
     },
     "out_of_fold_default_threshold_metrics": {
       "accuracy": 0.9995575951433778,
-      "precision": 0.9159090909090909,
-      "recall": 0.8191056910569106
+      "precision": 0.9178082191780822,
+      "recall": 0.8170731707317073
     },
     "out_of_fold_operating_threshold_metrics": {
-      "accuracy": 0.9995575951433778,
-      "precision": 0.9236111111111112,
-      "recall": 0.8109756097560976
+      "accuracy": 0.9995611062930335,
+      "precision": 0.9237875288683602,
+      "recall": 0.8130081300813008
     },
     "threshold_calibration": {
       "selection_rule": "minimize_weighted_gap_to_business_targets",
@@ -34,19 +34,19 @@
         "recall_weight": 1.0
       },
       "selected": {
-        "threshold": 0.61,
+        "threshold": 0.565,
         "metrics": {
-          "accuracy": 0.9995575951433778,
-          "precision": 0.9236111111111112,
-          "recall": 0.8109756097560976
+          "accuracy": 0.9995611062930335,
+          "precision": 0.9237875288683602,
+          "recall": 0.8130081300813008
         },
         "business_alignment": {
           "target_precision": 0.9227,
           "target_recall": 0.8102,
-          "precision_gap": 0.0009111111111111958,
-          "recall_gap": 0.0007756097560975839,
-          "weighted_gap": 0.0025978319783199755,
-          "alignment_score": 0.99740216802168
+          "precision_gap": 0.0010875288683602768,
+          "recall_gap": 0.0028081300813007637,
+          "weighted_gap": 0.004983187818021317,
+          "alignment_score": 0.9950168121819787
         }
       }
     }
@@ -75,7 +75,7 @@
   "model": {
     "artifact_path": "models\\model.pkl",
     "type": "XGBClassifier",
-    "pipeline": "ColumnTransformer(PowerTransformer+MinMaxScaler) + XGBClassifier",
+    "pipeline": "TemporalFeatureEngineer(hour,hour_sin,hour_cos) + ColumnTransformer(PowerTransformer+MinMaxScaler) + XGBClassifier",
     "random_state": 42,
     "max_depth": 7,
     "n_estimators": 300,
