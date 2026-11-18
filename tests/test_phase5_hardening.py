@@ -24,11 +24,17 @@ def test_validate_input_dataset_rejects_missing_required_column():
         validate_input_dataset(df, quality_config)
 
 
-def test_validate_prepared_dataset_accepts_valid_minmax_output():
+def test_validate_prepared_dataset_accepts_raw_features():
+    """A saida do prepare_data agora mantem features BRUTAS (anti-leakage).
+
+    A transformacao (Yeo-Johnson/MinMax) passou a ocorrer dentro do Pipeline de
+    treino, ajustada por fold. Portanto a validacao nao pode mais exigir Time em
+    [0, 1]; ela apenas reporta os valores observados.
+    """
     df = pd.DataFrame(
         {
-            "Time": [0.0, 0.4, 1.0],
-            "Amount": [-1.1, 0.2, 0.9],
+            "Time": [10.0, 500.0, 172792.0],
+            "Amount": [1.0, 100.5, 25691.16],
             "Class": [0, 1, 0],
         }
     )
@@ -48,8 +54,10 @@ def test_validate_prepared_dataset_accepts_valid_minmax_output():
 
     assert report["row_count"] == 3
     assert report["null_count"] == 0
-    assert report["time_min"] == 0.0
-    assert report["time_max"] == 1.0
+    assert report["time_min"] == 10.0
+    assert report["time_max"] == 172792.0
+    assert report["features_are_raw"] is True
+    assert report["preprocessing_stage"] == "training_pipeline"
 
 
 def test_evaluate_model_acceptance_passes_when_metrics_meet_gate():

@@ -6,8 +6,11 @@ import joblib
 import numpy as np
 import pandas as pd
 import yaml
+from sklearn.compose import ColumnTransformer
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler, PowerTransformer
 from xgboost import XGBClassifier
 
 BOOTSTRAP_ROOT = Path(__file__).resolve().parents[2]
@@ -16,12 +19,19 @@ if str(BOOTSTRAP_ROOT) not in sys.path:
 
 from src.config.paths import MODEL_METADATA_PATH, PIPELINE_MODEL_PATH, PROCESSED_DATA_PATH, PROJECT_ROOT
 
+DEFAULT_THRESHOLD = 0.5
 
-def load_training_config() -> tuple[dict, dict, dict]:
+
+def load_training_config() -> tuple[dict, dict, dict, dict]:
     params_path = PROJECT_ROOT / "params.yaml"
     with params_path.open("r", encoding="utf-8") as file:
         params = yaml.safe_load(file)
-    return params["train"]["evaluation"], params["train"]["acceptance"], params["train"]["xgboost"]
+    return (
+        params["train"]["evaluation"],
+        params["train"]["acceptance"],
+        params["train"]["xgboost"],
+        params["preprocess"],
+    )
 
 
 def build_model_config(base_config: dict, y: pd.Series) -> dict:
@@ -30,6 +40,29 @@ def build_model_config(base_config: dict, y: pd.Series) -> dict:
         class_ratio = y.value_counts()[0] / y.value_counts()[1]
         model_config["scale_pos_weight"] = float(class_ratio)
     return model_config
+
+
+def build_preprocessor(preprocess_config: dict) -> ColumnTransformer:
+    """Cria o pre-processador ajustavel por fold (anti-leakage).
+
+    Os transformadores deixam de ser ajustados sobre o dataset inteiro e passam
+    a ser ajustados apenas nos dados de treino de cada fold, dentro do Pipeline.
+    """
+    transformers = []
+    if preprocess_config.get("amount_transform") == "yeo-johnson":
+        transformers.append(("amount", PowerTransformer(method="yeo-johnson"), ["Amount"]))
+    if preprocess_config.get("time_scaler") == "minmax":
+        transformers.append(("time", MinMaxScaler(), ["Time"]))
+    return ColumnTransformer(transformers, remainder="passthrough")
+
+
+def build_pipeline(model_config: dict, preprocess_config: dict) -> Pipeline:
+    return Pipeline(
+        [
+            ("preprocess", build_preprocessor(preprocess_config)),
+            ("classifier", XGBClassifier(**model_config)),
+        ]
+    )
 
 
 def compute_classification_metrics(y_true: pd.Series, y_pred: np.ndarray) -> dict:
@@ -121,28 +154,38 @@ def select_business_threshold(
     }
 
 
-def evaluate_with_cross_validation(X: pd.DataFrame, y: pd.Series, evaluation_config: dict, model_config: dict) -> dict:
-    kf = KFold(
+def evaluate_with_cross_validation(
+    X: pd.DataFrame,
+    y: pd.Series,
+    evaluation_config: dict,
+    model_config: dict,
+    preprocess_config: dict,
+) -> dict:
+    splitter = StratifiedKFold(
         n_splits=evaluation_config["cv_folds"],
         shuffle=evaluation_config["shuffle"],
         random_state=evaluation_config["random_state"],
     )
+    splits = list(splitter.split(X, y))
 
-    fold_metrics = []
     oof_probabilities = np.zeros(len(y), dtype=float)
+    for train_index, test_index in splits:
+        pipeline = build_pipeline(model_config, preprocess_config)
+        pipeline.fit(X.iloc[train_index], y.iloc[train_index])
+        oof_probabilities[test_index] = pipeline.predict_proba(X.iloc[test_index])[:, 1]
 
-    for train_index, test_index in kf.split(X):
-        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+    threshold_calibration = select_business_threshold(y, oof_probabilities, evaluation_config)
+    operating_threshold = float(threshold_calibration["selected"]["threshold"])
 
-        model = XGBClassifier(**model_config)
-        model.fit(X_train, y_train)
-
-        fold_probabilities = model.predict_proba(X_test)[:, 1]
-        oof_probabilities[test_index] = fold_probabilities
-
-        fold_predictions = (fold_probabilities >= 0.5).astype(int)
-        fold_metrics.append(compute_classification_metrics(y_test, fold_predictions))
+    # Metricas do gate de negocio avaliadas NO THRESHOLD OPERACIONAL (nao em 0.5),
+    # pois e nessa faixa que o modelo efetivamente opera em producao.
+    fold_metrics = [
+        compute_classification_metrics(
+            y.iloc[test_index],
+            (oof_probabilities[test_index] >= operating_threshold).astype(int),
+        )
+        for _, test_index in splits
+    ]
 
     cross_validation_mean_metrics = {
         "accuracy": float(np.mean([fold["accuracy"] for fold in fold_metrics])),
@@ -150,12 +193,16 @@ def evaluate_with_cross_validation(X: pd.DataFrame, y: pd.Series, evaluation_con
         "recall": float(np.mean([fold["recall"] for fold in fold_metrics])),
     }
 
-    out_of_fold_default_metrics = compute_classification_metrics(y, (oof_probabilities >= 0.5).astype(int))
-    threshold_calibration = select_business_threshold(y, oof_probabilities, evaluation_config)
-
     return {
+        "cv_strategy": "StratifiedKFold",
+        "operating_threshold": operating_threshold,
         "cross_validation_mean_metrics": cross_validation_mean_metrics,
-        "out_of_fold_default_threshold_metrics": out_of_fold_default_metrics,
+        "out_of_fold_default_threshold_metrics": compute_classification_metrics(
+            y, (oof_probabilities >= DEFAULT_THRESHOLD).astype(int)
+        ),
+        "out_of_fold_operating_threshold_metrics": compute_classification_metrics(
+            y, (oof_probabilities >= operating_threshold).astype(int)
+        ),
         "threshold_calibration": threshold_calibration,
     }
 
@@ -179,14 +226,19 @@ def evaluate_model_acceptance(metrics: dict, acceptance_config: dict) -> dict:
     }
 
 
-def train_final_model(X: pd.DataFrame, y: pd.Series, model_config: dict) -> None:
-    model = XGBClassifier(**model_config)
-    model.fit(X, y)
+def train_final_model(X: pd.DataFrame, y: pd.Series, model_config: dict, preprocess_config: dict) -> None:
+    pipeline = build_pipeline(model_config, preprocess_config)
+    pipeline.fit(X, y)
     PIPELINE_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, PIPELINE_MODEL_PATH)
+    joblib.dump(pipeline, PIPELINE_MODEL_PATH)
 
 
-def save_metrics(metrics: dict, evaluation_config: dict, acceptance_config: dict, model_config: dict) -> None:
+def save_metrics(
+    metrics: dict,
+    evaluation_config: dict,
+    acceptance_config: dict,
+    model_config: dict,
+) -> None:
     metrics_payload = {
         "dataset": {
             "processed_data_path": str(PROCESSED_DATA_PATH.relative_to(PROJECT_ROOT)),
@@ -195,7 +247,7 @@ def save_metrics(metrics: dict, evaluation_config: dict, acceptance_config: dict
             "cv_folds": int(evaluation_config["cv_folds"]),
             "cv_shuffle": bool(evaluation_config["shuffle"]),
             "cv_random_state": int(evaluation_config["random_state"]),
-            "default_threshold": 0.5,
+            "default_threshold": DEFAULT_THRESHOLD,
             **metrics,
         },
         "business_target": {
@@ -206,6 +258,7 @@ def save_metrics(metrics: dict, evaluation_config: dict, acceptance_config: dict
         "model": {
             "artifact_path": str(PIPELINE_MODEL_PATH.relative_to(PROJECT_ROOT)),
             "type": "XGBClassifier",
+            "pipeline": "ColumnTransformer(PowerTransformer+MinMaxScaler) + XGBClassifier",
             "random_state": int(model_config["random_state"]),
             "max_depth": int(model_config["max_depth"]),
             "n_estimators": int(model_config["n_estimators"]),
@@ -235,11 +288,11 @@ def main() -> None:
     X = df.drop("Class", axis=1)
     y = df["Class"]
 
-    evaluation_config, acceptance_config, base_model_config = load_training_config()
+    evaluation_config, acceptance_config, base_model_config, preprocess_config = load_training_config()
     model_config = build_model_config(base_model_config, y)
 
-    metrics = evaluate_with_cross_validation(X, y, evaluation_config, model_config)
-    train_final_model(X, y, model_config)
+    metrics = evaluate_with_cross_validation(X, y, evaluation_config, model_config, preprocess_config)
+    train_final_model(X, y, model_config, preprocess_config)
     save_metrics(metrics, evaluation_config, acceptance_config, model_config)
     save_model_metadata(
         {
@@ -257,9 +310,9 @@ def main() -> None:
         raise RuntimeError(f"Modelo reprovado nos criterios de aceite: {acceptance['checks']}")
 
     print(
-        "Modelo treinado com validação cruzada. "
-        f"Threshold calibrado: {selected_threshold['threshold']:.3f} | "
-        f"Precisão: {selected_threshold['metrics']['precision']:.4f} | "
+        "Modelo treinado com validacao cruzada estratificada (Pipeline anti-leakage). "
+        f"Threshold operacional: {selected_threshold['threshold']:.3f} | "
+        f"Precisao: {selected_threshold['metrics']['precision']:.4f} | "
         f"Recall: {selected_threshold['metrics']['recall']:.4f} | "
         f"Aceite: {'PASS' if acceptance['passed'] else 'FAIL'}"
     )

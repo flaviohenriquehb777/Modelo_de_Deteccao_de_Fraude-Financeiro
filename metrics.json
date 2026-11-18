@@ -7,15 +7,22 @@
     "cv_shuffle": true,
     "cv_random_state": 42,
     "default_threshold": 0.5,
+    "cv_strategy": "StratifiedKFold",
+    "operating_threshold": 0.61,
     "cross_validation_mean_metrics": {
-      "accuracy": 0.9995751506819646,
-      "precision": 0.9262960762960762,
-      "recall": 0.8200341298203545
+      "accuracy": 0.9995575945021894,
+      "precision": 0.925577532689237,
+      "recall": 0.810938775510204
     },
     "out_of_fold_default_threshold_metrics": {
-      "accuracy": 0.9995751508916565,
-      "precision": 0.9264367816091954,
+      "accuracy": 0.9995575951433778,
+      "precision": 0.9159090909090909,
       "recall": 0.8191056910569106
+    },
+    "out_of_fold_operating_threshold_metrics": {
+      "accuracy": 0.9995575951433778,
+      "precision": 0.9236111111111112,
+      "recall": 0.8109756097560976
     },
     "threshold_calibration": {
       "selection_rule": "minimize_weighted_gap_to_business_targets",
@@ -27,19 +34,19 @@
         "recall_weight": 1.0
       },
       "selected": {
-        "threshold": 0.5,
+        "threshold": 0.61,
         "metrics": {
-          "accuracy": 0.9995751508916565,
-          "precision": 0.9264367816091954,
-          "recall": 0.8191056910569106
+          "accuracy": 0.9995575951433778,
+          "precision": 0.9236111111111112,
+          "recall": 0.8109756097560976
         },
         "business_alignment": {
           "target_precision": 0.9227,
           "target_recall": 0.8102,
-          "precision_gap": 0.0037367816091954387,
-          "recall_gap": 0.008905691056910525,
-          "weighted_gap": 0.016379254275301403,
-          "alignment_score": 0.9836207457246986
+          "precision_gap": 0.0009111111111111958,
+          "recall_gap": 0.0007756097560975839,
+          "weighted_gap": 0.0025978319783199755,
+          "alignment_score": 0.99740216802168
         }
       }
     }
@@ -68,6 +75,7 @@
   "model": {
     "artifact_path": "models\\model.pkl",
     "type": "XGBClassifier",
+    "pipeline": "ColumnTransformer(PowerTransformer+MinMaxScaler) + XGBClassifier",
     "random_state": 42,
     "max_depth": 7,
     "n_estimators": 300,

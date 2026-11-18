@@ -8,15 +8,18 @@
     "acceptance_passed": true,
     "decision_threshold_versioned": true,
     "operational_model_present": true,
-    "calibrated_precision": 0.9264367816091954,
-    "calibrated_recall": 0.8191056910569106,
-    "alignment_score": 0.9836207457246986
+    "validation_strategy": "StratifiedKFold",
+    "operating_threshold": 0.61,
+    "calibrated_precision": 0.9236111111111112,
+    "calibrated_recall": 0.8109756097560976,
+    "alignment_score": 0.99740216802168
   },
   "data_readiness": {
     "quality_report_passed": true,
     "processed_rows": 284807,
     "null_count": 0,
-    "time_scaled_to_unit_interval": true
+    "features_are_raw": true,
+    "preprocessing_stage": "training_pipeline"
   },
   "public_evidence": {
     "public_experiments": 7,

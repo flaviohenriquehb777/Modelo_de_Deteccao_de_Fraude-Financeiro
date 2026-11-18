@@ -60,7 +60,7 @@ def build_analysis_sample(data: pd.DataFrame, sample_size: int, random_state: in
 
 class FraudSHAPExplainer:
     def __init__(self, model_path: Path, data_path: Path, output_dir: Path, explainability_config: dict):
-        self.model = joblib.load(model_path)
+        self.pipeline = joblib.load(model_path)
         self.data = pd.read_parquet(data_path)
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -71,16 +71,41 @@ class FraudSHAPExplainer:
             explainability_config["sample_size"],
             explainability_config["random_state"],
         )
-        self.X = sampled_data.drop("Class", axis=1)
+        raw_features = sampled_data.drop("Class", axis=1)
         self.y = sampled_data["Class"]
 
+        self.preprocessor = self._resolve_preprocessor()
+        self.classifier = self._resolve_classifier()
+
+        # O artefato de producao e um Pipeline que recebe features BRUTAS. Para o
+        # SHAP precisamos explicar o classificador, entao aplicamos a etapa de
+        # pre-processamento do proprio Pipeline (ajustada no treino) nos dados.
+        if self.preprocessor is not None:
+            transformed = self.preprocessor.transform(raw_features)
+            feature_names = list(self.preprocessor.get_feature_names_out())
+            self.X = pd.DataFrame(transformed, columns=feature_names, index=raw_features.index)
+        else:
+            self.X = raw_features
+
         print(f"Dados carregados para explainability: {self.X.shape}")
-        print(f"Modelo carregado: {type(self.model).__name__}")
+        print(f"Classificador explicado: {type(self.classifier).__name__}")
+
+    def _resolve_preprocessor(self):
+        steps = getattr(self.pipeline, "named_steps", None)
+        if steps and "preprocess" in steps:
+            return steps["preprocess"]
+        return None
+
+    def _resolve_classifier(self):
+        steps = getattr(self.pipeline, "named_steps", None)
+        if steps and "classifier" in steps:
+            return steps["classifier"]
+        return self.pipeline
 
     def generate_shap_analysis(self) -> None:
         print("Gerando analise SHAP...")
 
-        self.explainer = shap.TreeExplainer(self.model)
+        self.explainer = shap.TreeExplainer(self.classifier)
         shap_values = self.explainer.shap_values(self.X)
         if isinstance(shap_values, list):
             shap_values = shap_values[1]

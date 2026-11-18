@@ -15,6 +15,26 @@ class InferenceBundle:
     feature_names: list[str]
 
 
+def resolve_feature_names(model: object) -> list[str]:
+    """Resolve os nomes de entrada esperados pelo modelo.
+
+    O artefato de producao e um Pipeline (pre-processamento + classificador).
+    Como as features chegam BRUTAS, os nomes esperados sao os do primeiro passo
+    do Pipeline (o pre-processador). Tambem aceitamos um estimador isolado.
+    """
+    feature_names = getattr(model, "feature_names_in_", None)
+    if feature_names is not None and len(feature_names) > 0:
+        return list(feature_names)
+
+    steps = getattr(model, "steps", None)
+    if steps:
+        step_features = getattr(steps[0][1], "feature_names_in_", None)
+        if step_features is not None and len(step_features) > 0:
+            return list(step_features)
+
+    return []
+
+
 def load_inference_bundle(
     model_path: Path = PIPELINE_MODEL_PATH,
     metadata_path: Path = MODEL_METADATA_PATH,
@@ -23,7 +43,7 @@ def load_inference_bundle(
     with metadata_path.open("r", encoding="utf-8") as file:
         metadata = json.load(file)
 
-    feature_names = list(getattr(model, "feature_names_in_", []))
+    feature_names = resolve_feature_names(model)
     if not feature_names:
         raise ValueError("O modelo nao expoe feature_names_in_.")
 
