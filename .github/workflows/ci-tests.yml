@@ -8,7 +8,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -17,7 +17,7 @@ jobs:
     # uv.lock, que congela o grafo transitivo com hashes (mesmo do ambiente
     # local). `--frozen` garante que a CI nunca reescreva o lock.
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         version: "0.12.5"
         enable-cache: true
