@@ -240,8 +240,11 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 ├── dvc.yaml                               # Definição do pipeline
 ├── metrics.json                           # Métrica do DVC (cache: false)
 ├── params.yaml                            # Parâmetros oficiais (inclui SEED = 42)
+├── pyproject.toml                         # Metadados e dependências (PEP 621)
+├── uv.lock                                # Lock reprodutível (transitivas + hashes)
+├── .python-version                        # Python fixado (3.12)
 ├── pytest.ini
-└── requirements.txt                       # Dependências com versões fixadas
+└── requirements.txt                       # Dependências (espelho para pip)
 ```
 
 > **Convenção de artefatos:** o pipeline operacional usa `models/model.pkl`. A referência histórica do melhor modelo experimental é preservada em `models/best_model_xgboost.reference.json`, sem ponteiro DVC órfão.
@@ -252,8 +255,9 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 
 ### Pré-requisitos
 
-- **Python 3.12** (exigido por `xgboost==3.3.0` / `shap==0.52.0`)
-- `git`, `pip`
+- **Python 3.12** (exigido por `xgboost==3.3.0` / `shap==0.52.0`; fixado em [.python-version](.python-version))
+- [**uv**](https://docs.astral.sh/uv/) — gerenciador de ambiente e dependências
+- `git`
 - Acesso ao remoto DVC (DagsHub) para `dvc pull`
 
 ### Passo a passo
@@ -263,43 +267,41 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 git clone https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro.git
 cd Modelo_de_Deteccao_de_Fraude-Financeiro
 
-# 2. Crie e ative o ambiente virtual
-python -m venv .venv
-source .venv/bin/activate      # Linux/macOS
-.venv\Scripts\activate         # Windows (PowerShell)
+# 2. Sincronize o ambiente a partir do lock (cria .venv e instala tudo)
+uv sync
 
-# 3. Instale as dependências fixadas
-pip install -r requirements.txt
+# 3. Baixe dados e artefatos versionados
+uv run dvc pull
 
-# 4. Baixe dados e artefatos versionados
-dvc pull
-
-# 5. Reproduza o pipeline completo (idempotente)
-dvc repro
+# 4. Reproduza o pipeline completo (idempotente)
+uv run dvc repro
 ```
+
+> **Alternativa com pip:** o `requirements.txt` é mantido como espelho das dependências
+> fixadas. Nesse caso use `python -m venv .venv && pip install -r requirements.txt`.
 
 Se o `dvc pull` solicitar autenticação, configure as credenciais localmente (sem versionar segredos):
 
 ```bash
-dvc remote modify --local dagshub auth basic
-dvc remote modify --local dagshub user <seu_usuario_dagshub>
-dvc remote modify --local dagshub password <seu_token_dagshub>
+uv run dvc remote modify --local dagshub auth basic
+uv run dvc remote modify --local dagshub user <seu_usuario_dagshub>
+uv run dvc remote modify --local dagshub password <seu_token_dagshub>
 ```
 
 ### Executando estágios individuais
 
 ```bash
-dvc repro prepare_data            # saneamento e transformação
-dvc repro train_model             # treino, calibração e gate de aceite
-dvc repro generate_shap_insights  # explicações SHAP
-dvc repro generate_shap_report    # relatório PDF
+uv run dvc repro prepare_data            # saneamento e transformação
+uv run dvc repro train_model             # treino, calibração e gate de aceite
+uv run dvc repro generate_shap_insights  # explicações SHAP
+uv run dvc repro generate_shap_report    # relatório PDF
 ```
 
 ### Testes e verificação de reprodutibilidade
 
 ```bash
-pytest -q                          # suíte completa (33 testes)
-dvc repro && dvc status            # deve reportar "Data and pipelines are up to date."
+uv run pytest -q                        # suíte completa (33 testes)
+uv run dvc repro && uv run dvc status   # deve reportar "Data and pipelines are up to date."
 ```
 
 > **Interpretando o gate de idempotência:** se a segunda execução de `dvc repro` não alterar nenhum estágio e `dvc status` reportar *up to date*, o ambiente fixado reproduz exatamente os hashes do `dvc.lock` — ou seja, a reprodutibilidade está comprovada.
@@ -311,7 +313,7 @@ dvc repro && dvc status            # deve reportar "Data and pipelines are up to
 Interface oficial: **`python -m src.serving.cli`**
 
 ```bash
-python -m src.serving.cli \
+uv run python -m src.serving.cli \
   --input dados/credicard_tratado.parquet \
   --output reports/predictions.csv \
   --format csv \

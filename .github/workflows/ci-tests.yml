@@ -12,49 +12,47 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Python 3.12: exigido por xgboost 3.3 e shap 0.52 (requires-python >= 3.12).
-    # Deve ser o mesmo interpretador usado para gerar o dvc.lock.
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
+    # Ambiente reprodutivel via uv: a versao do Python vem do .python-version
+    # (3.12, exigida por xgboost 3.3 e shap 0.52) e as dependencias vem do
+    # uv.lock, que congela o grafo transitivo com hashes (mesmo do ambiente
+    # local). `--frozen` garante que a CI nunca reescreva o lock.
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: '3.12'
-        cache: 'pip'
+        version: "0.12.5"
+        enable-cache: true
 
-    # Todas as versoes (inclusive dvc) vem fixadas do requirements.txt.
+    - name: Set up Python 3.12
+      run: uv python install 3.12
+
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest==9.1.0
+      run: uv sync --frozen
 
     - name: Validate dependencies
-      run: |
-        python -m pip check
+      run: uv pip check
 
     - name: Configure DVC with DagsHub
       run: |
-        dvc remote modify --local dagshub url https://dagshub.com/${{ secrets.DAGSHUB_USER || github.repository_owner }}/${{ secrets.DAGSHUB_REPO_NAME || github.event.repository.name }}.dvc
-        dvc remote modify --local dagshub auth basic
-        dvc remote modify --local dagshub user ${{ secrets.DAGSHUB_USER || github.repository_owner }}
-        dvc remote modify --local dagshub password ${{ secrets.DAGSHUB_TOKEN }}
-        dvc remote list
-        dvc remote default
+        uv run dvc remote modify --local dagshub url https://dagshub.com/${{ secrets.DAGSHUB_USER || github.repository_owner }}/${{ secrets.DAGSHUB_REPO_NAME || github.event.repository.name }}.dvc
+        uv run dvc remote modify --local dagshub auth basic
+        uv run dvc remote modify --local dagshub user ${{ secrets.DAGSHUB_USER || github.repository_owner }}
+        uv run dvc remote modify --local dagshub password ${{ secrets.DAGSHUB_TOKEN }}
+        uv run dvc remote list
+        uv run dvc remote default
 
     - name: Pull data and model from DVC
-      run: |
-        dvc pull
+      run: uv run dvc pull
 
     - name: Run test suite
-      run: |
-        pytest -q
+      run: uv run pytest -q
 
     # Gate de reprodutibilidade: o pipeline deve ficar "up to date" apos um repro.
     # Isso prova que o ambiente fixado reproduz exatamente os hashes do dvc.lock.
     - name: Test DVC reproducibility
       run: |
-        dvc status
-        dvc repro
-        STATUS="$(dvc status)"
+        uv run dvc status
+        uv run dvc repro
+        STATUS="$(uv run dvc status)"
         echo "$STATUS"
         echo "$STATUS" | grep -q "up to date" || { echo "::error::Pipeline DVC nao e idempotente apos dvc repro"; exit 1; }
-        dvc version
+        uv run dvc version

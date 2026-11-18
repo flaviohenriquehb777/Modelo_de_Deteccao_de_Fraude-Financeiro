@@ -20,7 +20,7 @@ Este guia resume o caminho mais curto para validar que o repositório está prof
 5. Execute a inferência oficial:
 
 ```bash
-python -m src.serving.cli --input dados/credicard_tratado.parquet --output predictions.csv --limit 5 --format csv
+uv run python -m src.serving.cli --input dados/credicard_tratado.parquet --output predictions.csv --limit 5 --format csv
 ```
 
 ## O que observar
