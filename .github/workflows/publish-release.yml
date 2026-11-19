@@ -53,6 +53,9 @@ jobs:
           elif [ "$TAG" = "v1.1.0" ]; then
             title="v1.1.0 — Rename + DagsHub/DVC/CI"
             notes=$'Ajustes pós-rename do repositório e correções de integração com DagsHub/DVC/CI.\n\n- Tag: v1.1.0\n- Commit: '"$sha"$'\n\nPrincipais pontos:\n- Links e instruções atualizados no README\n- DVC remoto alinhado ao novo repositório no DagsHub\n- GitHub Actions executa dvc pull + testes usando secrets\n\nObservação: credenciais do DagsHub devem ser configuradas via secrets/--local (não versionar tokens).'
+          elif [ "$TAG" = "v1.5.0" ]; then
+            title="v1.5.0 — Governança, CI e release"
+            notes=$'Governança de qualidade e reforço de reprodutibilidade no CI.\n\n- Tag: v1.5.0\n- Commit: '"$sha"$'\n\nPrincipais pontos:\n- `ruff` sem avisos e como gate obrigatório na CI (src, tests, conftest e scripts)\n- Notebooks históricos higienizados (sem saídas/execução) e fora do lint\n- Gate de idempotência do DVC mantido (`dvc repro` -> `up to date`)\n- README e docs/evaluator-guide revisados\n\nMétricas do modelo (sem vazamento de dados): precisão 0,9611 / recall 0,8028 (PASS).'
           else
             title="$TAG"
             notes=$'Release publicada automaticamente.\n\n- Tag: '"$TAG"$'\n- Commit: '"$sha"

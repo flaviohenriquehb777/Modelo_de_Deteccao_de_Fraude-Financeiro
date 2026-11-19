@@ -507,7 +507,8 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - [v1.1.0 — Rename + DagsHub/DVC/CI](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.1.0)
 - [v1.2.0 — Production Hardening Update](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.2.0)
 - [v1.3.0 — Reprodutibilidade e hardening](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.3.0)
-- [v1.4.0 — Governança, CI e release](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.4.0)
+- [v1.4.0 — Ambiente uv e README](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.4.0)
+- [v1.5.0 — Governança, CI e release](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.5.0)
 
 > A entrega histórica segue explicitamente preservada pelas tags `snapshot` e `v1.0.0`; nenhum commit do histórico original foi reescrito.
 
@@ -518,8 +519,8 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - **Fases 1–9** — Diagnóstico, narrativa, higienização, reprodutibilidade, hardening, testes, serving, MLflow/DagsHub e polimento: concluídas
 - **Fase 10 — Entrega Oficial do Update:** concluída (release v1.2.0)
 - **Fase 11 — Reprodutibilidade de Nível Sênior:** concluída (release v1.3.0) — versões fixadas, Python 3.12 na CI, gate de idempotência do DVC, `mlruns` fora do Git e README reconstruído
-- **Fase 12 — Ambiente de nível sênior com uv:** concluída — [pyproject.toml](pyproject.toml) (PEP 621) + [uv.lock](uv.lock) com hashes, Python 3.12 fixado em [.python-version](.python-version) e CI migrada para `uv sync --frozen`
-- **Fase 13 — Governança, CI e release:** concluída (release v1.4.0) — `ruff` sem avisos e como gate obrigatório na CI, notebooks higienizados (sem saídas/execução) e documentação revisada
+- **Fase 12 — Ambiente de nível sênior com uv:** concluída (release v1.4.0) — [pyproject.toml](pyproject.toml) (PEP 621) + [uv.lock](uv.lock) com hashes, Python 3.12 fixado em [.python-version](.python-version) e CI migrada para `uv sync --frozen`
+- **Fase 13 — Governança, CI e release:** concluída (release v1.5.0) — `ruff` sem avisos e como gate obrigatório na CI, notebooks higienizados (sem saídas/execução) e documentação revisada
 
 ---
 
