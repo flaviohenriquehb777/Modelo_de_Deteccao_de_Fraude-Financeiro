@@ -23,14 +23,21 @@ Este guia resume o caminho mais curto para validar que o repositório está prof
 uv run python -m src.serving.cli --input dados/credicard_tratado.parquet --output predictions.csv --limit 5 --format csv
 ```
 
+6. Suba a API HTTP de referência e valide o contrato:
+
+```bash
+uv run uvicorn src.serving.api:app --port 8000   # GET /health, GET /model/metadata, POST /predict
+```
+
 ## O que observar
 
 - O threshold operacional está versionado em `models/model_metadata.json`.
 - O pipeline exige aceite mínimo de precisão e recall antes de promover o modelo.
 - O DVC do branch atual não depende mais de ponteiros órfãos.
 - O MLflow/DagsHub público expõe o histórico experimental e o best-model.
-- A suíte de testes cobre dados, métricas, inferência, links públicos e serving.
-- O `ruff` roda sem avisos e é gate obrigatório da CI, junto com os testes e o gate de idempotência do DVC.
+- A suíte de testes cobre dados, métricas, inferência, API HTTP de serving, links públicos e relatórios.
+- O `ruff` roda sem avisos e é gate obrigatório da CI, junto com os testes, o build da imagem Docker (sem publicar) e o gate de idempotência do DVC.
+- A camada de serving (CLI + API FastAPI + imagem Docker) é de **referência**: prova o empacotamento, **sem** deploy, SLA ou monitoramento.
 
 ## Leitura recomendada
 

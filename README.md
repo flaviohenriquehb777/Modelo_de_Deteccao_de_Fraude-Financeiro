@@ -1,6 +1,6 @@
 <h1 align="center">🚨 Modelo de Detecção de Fraude em Transações (Credicard — Brasil)</h1>
 
-<p align="center"><i>XGBoost + pipeline DVC reprodutível + explainability SHAP + serving com contrato de inferência validado.</i></p>
+<p align="center"><i>XGBoost + pipeline DVC reprodutível + explainability SHAP + serving (CLI e API FastAPI) empacotado em Docker.</i></p>
 
 <p align="center">
 <a href="LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
@@ -14,7 +14,7 @@
 <img src="https://img.shields.io/badge/Python-3.12-blue.svg" alt="Python 3.12">
 <img src="https://img.shields.io/badge/uv-0.12.5-de5fe9" alt="uv">
 <img src="https://img.shields.io/badge/Depend%C3%AAncias-Fixadas%20(==)-success" alt="Dependências fixadas">
-<img src="https://img.shields.io/badge/Testes-94%20passando-brightgreen" alt="Testes">
+<img src="https://img.shields.io/badge/Testes-100%20passando-brightgreen" alt="Testes">
 <img src="https://img.shields.io/badge/SEED-42-informational" alt="SEED 42">
 <img src="https://img.shields.io/badge/XGBoost-3.3.0-success" alt="XGBoost">
 <img src="https://img.shields.io/badge/SHAP-0.52.0-purple" alt="SHAP">
@@ -34,6 +34,7 @@
 - [Estrutura do Repositório](#-estrutura-do-repositório)
 - [Como Reproduzir](#-como-reproduzir)
 - [Contrato de Inferência](#-contrato-de-inferência)
+- [API HTTP (Serving de Referência)](#-api-http-serving-de-referência)
 - [Métricas do Modelo](#-métricas-do-modelo)
 - [Evidências Técnicas](#-evidências-técnicas)
 - [Guia do Avaliador](#-guia-do-avaliador)
@@ -54,8 +55,9 @@
 - **Determinismo:** `SEED = 42` aplicado na validação cruzada, no XGBoost e no SHAP. O preparo de dados é determinístico por construção.
 - **Gate de aceite automatizado:** o treino só é aprovado se atingir os critérios de negócio de precisão/recall (ver [Métricas do Modelo](#-métricas-do-modelo)).
 - **Higiene de versionamento:** `mlruns/` não é mais rastreado pelo Git; dados, modelo e artefatos SHAP são versionados exclusivamente pelo DVC.
-- **Suíte de testes:** 94 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
+- **Suíte de testes:** 100 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, API HTTP de serving, relatórios públicos e links do README.
 - **Qualidade estática:** o `ruff` roda **sem avisos** em `src`, `tests`, `conftest.py` e scripts, e é um **gate obrigatório da CI** (além dos testes e do gate de idempotência do DVC).
+- **Serving empacotado (camada de referência):** CLI e API FastAPI compartilham o **mesmo contrato *fail-closed***; a imagem Docker constrói de forma reprodutível a partir do `uv.lock` e a CI valida o build — **sem deploy nem publicação em registry** (não é produção: sem SLA, autenticação ou monitoramento).
 
 ---
 
@@ -176,9 +178,9 @@ flowchart TD
 - **Versionamento com DVC:** dados, modelo e explicações SHAP são reconstruíveis via `dvc pull` / `dvc repro`; o [dvc.lock](dvc.lock) é a fonte de verdade dos hashes.
 - **Reprodutibilidade com versões fixas:** o ambiente é gerenciado pelo [uv](https://docs.astral.sh/uv/) — versões `==` no [pyproject.toml](pyproject.toml) e hashes no [uv.lock](uv.lock); a CI sincroniza com `uv sync --frozen` em Python 3.12.
 - **MLflow + DagsHub:** experimentos históricos, métricas e modelos registrados publicamente para auditoria técnica.
-- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala o ambiente com `uv sync --frozen`, valida as dependências (`uv pip check`), roda o lint (`ruff check .`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
+- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala o ambiente com `uv sync --frozen`, valida as dependências (`uv pip check`), roda o lint (`ruff check .`), baixa artefatos (`dvc pull`), roda a suíte de testes, valida o **build da imagem Docker** (sem publicar em registry) e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
 - **Releases versionadas ([publish-release.yml](.github/workflows/publish-release.yml)):** separam explicitamente a entrega original das atualizações posteriores.
-- **Serviço de inferência:** interface CLI versionada em [src/serving/cli.py](src/serving/cli.py), com validação de contrato *fail-closed*.
+- **Serving:** interface CLI em [src/serving/cli.py](src/serving/cli.py) e API HTTP FastAPI em [src/serving/api.py](src/serving/api.py), ambas com validação de contrato *fail-closed*; imagem empacotada pelo [Dockerfile](Dockerfile).
 
 ---
 
@@ -205,6 +207,7 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 │   ├── ci-tests.yml                       # Lint + testes + gate de idempotência do DVC
 │   └── publish-release.yml                # Publicação automática de releases
 ├── .dvcignore                             # Padrões ignorados pelo DVC
+├── .dockerignore                          # Contexto mínimo para o build da imagem
 ├── .gitignore                             # Padrões ignorados pelo Git
 ├── dados/                                 # Dados versionados pelo DVC
 │   ├── credicard.csv.gz.dvc               # Ponteiro do dado bruto
@@ -241,8 +244,10 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 │   └── serving/
 │       ├── __init__.py
 │       ├── inference.py                   # Carga do bundle, validação e previsão
-│       └── cli.py                          # Interface oficial de inferência
-├── tests/                                 # 94 testes automatizados
+│       ├── cli.py                          # Interface oficial de inferência (CLI)
+│       └── api.py                          # API HTTP de referência (FastAPI)
+├── tests/                                 # 100 testes automatizados
+├── Dockerfile                             # Imagem de serving (referência, sem deploy)
 ├── LICENSE.md
 ├── README.md
 ├── conftest.py                            # Garante o projeto no sys.path nos testes
@@ -310,12 +315,36 @@ uv run dvc repro generate_shap_report    # relatório PDF
 ### Testes e verificação de reprodutibilidade
 
 ```bash
-uv run pytest -q                        # suíte completa (94 testes)
+uv run pytest -q                        # suíte completa (100 testes)
 uv run ruff check .                     # lint sem avisos (zero warnings)
 uv run dvc repro && uv run dvc status   # deve reportar "Data and pipelines are up to date."
 ```
 
 > **Interpretando o gate de idempotência:** se a segunda execução de `dvc repro` não alterar nenhum estágio e `dvc status` reportar *up to date*, o ambiente fixado reproduz exatamente os hashes do `dvc.lock` — ou seja, a reprodutibilidade está comprovada.
+
+### Serving em container (imagem de referência)
+
+A imagem empacota o modelo e a API; o build é reprodutível (dependências vindas do `uv.lock`).
+
+```bash
+# 0. Garanta os artefatos do modelo em disco
+uv run dvc pull
+
+# 1. Build da imagem
+docker build -t fraude-serving:local .
+
+# 2. Suba o serviço em http://127.0.0.1:8000
+docker run --rm -p 8000:8000 fraude-serving:local
+
+# 3. Smoke test
+curl http://127.0.0.1:8000/health
+```
+
+> **Serving local (sem Docker), para desenvolvimento:**
+
+```bash
+uv run uvicorn src.serving.api:app --host 127.0.0.1 --port 8000
+```
 
 ---
 
@@ -363,6 +392,27 @@ uv run python -m src.serving.cli \
 </div>
 
 **Threshold oficial:** lido de `models/model_metadata.json` (chave `decision_threshold`), garantindo que treino e serving usem o **mesmo ponto de corte** — evitando divergência silenciosa entre avaliação e produção.
+
+---
+
+## 🛰️ API HTTP (Serving de Referência)
+
+Além da CLI, o **mesmo contrato de inferência** é exposto por uma **API HTTP FastAPI** em [src/serving/api.py](src/serving/api.py).
+
+<div align="center">
+
+| Endpoint | Método | Descrição |
+|:---:|:---:|:---:|
+| `/health` | GET | Estado do serviço, threshold e número de features |
+| `/model/metadata` | GET | Contrato completo (features) + métricas de aceite |
+| `/predict` | POST | Lote de transações → `fraud_probability` + `fraud_prediction` |
+
+</div>
+
+- **Mesmo contrato *fail-closed*:** payload inválido (sem registros, feature obrigatória ausente) responde **HTTP 422**, nunca uma previsão silenciosamente incorreta.
+- **Limite por requisição:** lote de até 10.000 registros por chamada.
+
+> **Rótulo honesto — isto **não** é produção.** A API é uma **camada de referência**: existe para provar que o modelo **empacota e sobe como serviço** de forma reprodutível. Ela **não** inclui autenticação, SLA, escalabilidade horizontal, tolerância a falhas nem monitoramento de drift/observabilidade — requisitos obrigatórios para um deploy real.
 
 ---
 
@@ -441,6 +491,8 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - **Pipeline versionado:** [dvc.yaml](dvc.yaml) · **[dvc.lock](dvc.lock)**
 - **Integração contínua:** [ci-tests.yml](.github/workflows/ci-tests.yml)
 - **Publicação de releases:** [publish-release.yml](.github/workflows/publish-release.yml)
+- **Serving HTTP de referência:** [src/serving/api.py](src/serving/api.py)
+- **Imagem de serving:** [Dockerfile](Dockerfile) · [.dockerignore](.dockerignore)
 - **Métricas operacionais:** [metrics.json](metrics.json)
 - **Qualidade dos dados:** [reports/data_quality_report.json](reports/data_quality_report.json)
 - **Resumo público de MLflow/DagsHub:** [mlflow_public_registry_summary.json](reports/mlflow_public_registry_summary.json)
@@ -486,6 +538,7 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - **Determinismo explícito** — `SEED = 42` único em todas as etapas estocásticas.
 - **Gate de aceite por métrica de negócio** — o treino falha se a precisão/recall caírem abaixo do alvo.
 - **Serving com contrato *fail-closed*** — não há "falha silenciosa": entradas ambíguas derrubam o processo.
+- **Serving empacotado e testado** — CLI e API FastAPI sobre o mesmo contrato, com testes HTTP de contrato e imagem Docker construída na CI (sem deploy).
 - **Explainability completa (SHAP)** com relatório executivo em PDF.
 - **Histórico preservado** — a entrega original permanece nas tags `snapshot` e `v1.0.0`.
 
@@ -509,6 +562,7 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - [v1.3.0 — Reprodutibilidade e hardening](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.3.0)
 - [v1.4.0 — Ambiente uv e README](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.4.0)
 - [v1.5.0 — Governança, CI e release](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.5.0)
+- [v1.6.0 — Serving empacotado (FastAPI + Docker)](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.6.0)
 
 > A entrega histórica segue explicitamente preservada pelas tags `snapshot` e `v1.0.0`; nenhum commit do histórico original foi reescrito.
 
@@ -521,6 +575,7 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - **Fase 11 — Reprodutibilidade de Nível Sênior:** concluída (release v1.3.0) — versões fixadas, Python 3.12 na CI, gate de idempotência do DVC, `mlruns` fora do Git e README reconstruído
 - **Fase 12 — Ambiente de nível sênior com uv:** concluída (release v1.4.0) — [pyproject.toml](pyproject.toml) (PEP 621) + [uv.lock](uv.lock) com hashes, Python 3.12 fixado em [.python-version](.python-version) e CI migrada para `uv sync --frozen`
 - **Fase 13 — Governança, CI e release:** concluída (release v1.5.0) — `ruff` sem avisos e como gate obrigatório na CI, notebooks higienizados (sem saídas/execução) e documentação revisada
+- **Fase 14 — Serving empacotado (referência):** concluída (release v1.6.0) — API HTTP FastAPI sobre o contrato de inferência, testes de contrato HTTP, imagem Docker reprodutível (`uv sync --frozen`) com **build validado na CI (sem publicar)**; **não** é deploy de produção
 
 ---
 

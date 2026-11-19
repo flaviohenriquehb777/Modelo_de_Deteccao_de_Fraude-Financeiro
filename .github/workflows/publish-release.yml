@@ -56,6 +56,9 @@ jobs:
           elif [ "$TAG" = "v1.5.0" ]; then
             title="v1.5.0 — Governança, CI e release"
             notes=$'Governança de qualidade e reforço de reprodutibilidade no CI.\n\n- Tag: v1.5.0\n- Commit: '"$sha"$'\n\nPrincipais pontos:\n- `ruff` sem avisos e como gate obrigatório na CI (src, tests, conftest e scripts)\n- Notebooks históricos higienizados (sem saídas/execução) e fora do lint\n- Gate de idempotência do DVC mantido (`dvc repro` -> `up to date`)\n- README e docs/evaluator-guide revisados\n\nMétricas do modelo (sem vazamento de dados): precisão 0,9611 / recall 0,8028 (PASS).'
+          elif [ "$TAG" = "v1.6.0" ]; then
+            title="v1.6.0 — Serving empacotado (FastAPI + Docker)"
+            notes=$'Camada de serving de REFERENCIA: empacotada e testada, mas sem deploy.\n\n- Tag: v1.6.0\n- Commit: '"$sha"$'\n\nPrincipais pontos:\n- API HTTP FastAPI (`/health`, `/model/metadata`, `/predict`) sobre o mesmo contrato de inferencia da CLI\n- Testes de contrato HTTP (payload invalido -> HTTP 422, contrato fail-closed)\n- Imagem Docker reprodutivel (`uv sync --frozen`) com HEALTHCHECK; build validado na CI, SEM publicar em registry\n- README e docs/evaluator-guide rotulando a camada como referencia (sem SLA, autenticacao ou monitoramento)\n\nMetricas do modelo (sem vazamento de dados): precisao 0,9611 / recall 0,8028 (PASS).'
           else
             title="$TAG"
             notes=$'Release publicada automaticamente.\n\n- Tag: '"$TAG"$'\n- Commit: '"$sha"

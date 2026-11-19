@@ -50,6 +50,12 @@ jobs:
     - name: Run test suite
       run: uv run pytest -q
 
+    # Gate de empacotamento: prova que a imagem de serving constroi de forma
+    # reprodutivel a partir do uv.lock. NAO publica em registry (camada de
+    # referencia, sem deploy).
+    - name: Build serving image (no publish)
+      run: docker build -t fraude-serving:ci .
+
     # Gate de reprodutibilidade: o pipeline deve ficar "up to date" apos um repro.
     # Isso prova que o ambiente fixado reproduz exatamente os hashes do dvc.lock.
     - name: Test DVC reproducibility
