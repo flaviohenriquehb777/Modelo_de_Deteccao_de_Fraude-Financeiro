@@ -804,6 +804,51 @@ def save_evaluation_plots(
     plt.close(cm_figure)
 
 
+def summarize_aspirational_target(
+    threshold_trade_off: list[dict],
+    evaluation_config: dict,
+) -> dict | None:
+    """Resume a meta aspiracional (96/82) como referencia NAO bloqueante.
+
+    A Fase 7 formaliza o gate BLOQUEANTE no alvo de negocio literal (96/80). A
+    meta endurecida 96/82 simultaneos e medida como inalcancavel na fronteira
+    honesta (recall >= 0,82 => precision maxima ~0,9140), portanto fica FORA do
+    gate e e reportada aqui somente como referencia, com o gap remanescente
+    explicito. O ponto factivel vem da propria tabela de trade-off (mesmo
+    calculo honesto, sem vazamento).
+    """
+    aspirational_precision = evaluation_config.get("aspirational_precision")
+    aspirational_recall = evaluation_config.get("aspirational_recall")
+    if aspirational_precision is None or aspirational_recall is None:
+        return None
+
+    aspirational_recall = float(aspirational_recall)
+    target_precision = float(aspirational_precision)
+    feasible_point = next(
+        (point for point in threshold_trade_off if point["recall_floor"] == aspirational_recall),
+        None,
+    )
+
+    summary = {
+        "target_precision": target_precision,
+        "target_recall": aspirational_recall,
+        "blocking": False,
+        "best_feasible": None,
+        "precision_gap": None,
+        "simultaneously_achievable": False,
+    }
+    if feasible_point is not None and feasible_point["precision"] is not None:
+        feasible_precision = float(feasible_point["precision"])
+        summary["best_feasible"] = {
+            "threshold": feasible_point["threshold"],
+            "precision": feasible_point["precision"],
+            "recall": feasible_point["recall"],
+        }
+        summary["precision_gap"] = target_precision - feasible_precision
+        summary["simultaneously_achievable"] = bool(feasible_precision >= target_precision)
+    return summary
+
+
 def save_metrics(
     metrics: dict,
     evaluation_config: dict,
@@ -839,6 +884,9 @@ def save_metrics(
             "precision": float(evaluation_config["target_precision"]),
             "recall": float(evaluation_config["target_recall"]),
         },
+        "aspirational_target": summarize_aspirational_target(
+            metrics["threshold_trade_off"], evaluation_config
+        ),
         "acceptance": evaluate_model_acceptance(metrics, acceptance_config),
         "model": {
             "artifact_path": str(PIPELINE_MODEL_PATH.relative_to(PROJECT_ROOT)),

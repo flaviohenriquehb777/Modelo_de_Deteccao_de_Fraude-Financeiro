@@ -48,6 +48,12 @@ train:
     # Meta de negocio (Fase 4): precision ~0,96 mantendo recall > 0,80.
     target_precision: 0.96
     target_recall: 0.80
+    # Meta ASPIRACIONAL (nao bloqueante) da Fase 7: 96/82 simultaneos. Medida
+    # como inalcancavel na fronteira honesta (recall >= 0,82 => precision max
+    # ~0,9140), logo NAO entra no gate; e reportada como referencia e gap em
+    # metrics.json (chave aspirational_target).
+    aspirational_precision: 0.96
+    aspirational_recall: 0.82
     # Pisos de recall documentados na tabela de trade-off precision x recall.
     trade_off_recall_floors:
       - 0.80
@@ -57,7 +63,9 @@ train:
     precision_weight: 2.0
     recall_weight: 1.0
   acceptance:
-    # Gate de negocio no ponto operacional calibrado (out-of-fold).
+    # Gate BLOQUEANTE (Fase 7): alvo de negocio literal 96/80 no ponto
+    # operacional calibrado (out-of-fold). A meta 96/82 e aspiracional e NAO
+    # bloqueia (ver evaluation.aspirational_precision/recall).
     min_calibrated_precision: 0.96
     min_calibrated_recall: 0.80
     # Guard-rails de estabilidade da media entre dobras (margem sobre a meta).

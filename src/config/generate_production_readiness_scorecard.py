@@ -45,6 +45,8 @@ def main() -> None:
             "calibrated_precision": selected_threshold["metrics"]["precision"],
             "calibrated_recall": selected_threshold["metrics"]["recall"],
             "alignment_score": selected_threshold["business_alignment"]["alignment_score"],
+            "business_target": metrics.get("business_target"),
+            "aspirational_target": metrics.get("aspirational_target"),
         },
         "data_readiness": {
             "quality_report_passed": data_quality["status"] == "passed",

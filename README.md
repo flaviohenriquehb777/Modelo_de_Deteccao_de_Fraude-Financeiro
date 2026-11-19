@@ -402,6 +402,23 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 
 **Status do gate: PASS** — `acceptance.passed = true`.
 
+### Meta aspiracional 96/82 (não bloqueante)
+
+A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recall > 80%). A meta **96/82 simultânea** é tratada como **aspiracional**: medida sobre a fronteira honesta out-of-fold, ela é **inalcançável** sem deteriorar a precisão (com `recall ≥ 0,82`, a precisão máxima observada é **0,9140**). Por isso ela **não** entra no gate — é apenas reportada em `metrics.json` (`aspirational_target`) e no scorecard, com o gap explícito.
+
+<div align="center">
+
+| Meta aspiracional | Valor |
+|:---:|:---:|
+| Alvo (`aspirational_precision` / `aspirational_recall`) | 0,96 / 0,82 |
+| Melhor ponto factível (`recall ≥ 0,82`) | P **0,9140** · R **0,8211** |
+| Gap de precisão (`0,96 − 0,9140`) | **0,0460** |
+| Simultaneamente alcançável? | ❌ (bloqueio aplicado apenas a 96/80) |
+
+</div>
+
+> **Por que não endurecer o gate para 96/82?** Seria um gate que **reprova sempre** (CI vermelha permanente). A escolha sênior é preservar o eixo de negócio crítico (precisão) e o recall mínimo, documentando o trade-off — **nunca** inflar métricas com vazamento de dados para forçar 96/82.
+
 ### Baseline legado (referência histórica)
 
 <div align="center">
