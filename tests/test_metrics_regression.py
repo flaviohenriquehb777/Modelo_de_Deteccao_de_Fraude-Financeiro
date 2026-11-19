@@ -1,6 +1,5 @@
 import json
 
-import pytest
 import yaml
 
 from src.config.paths import PROJECT_ROOT
@@ -27,8 +26,9 @@ def test_metrics_meet_acceptance_thresholds():
     metrics = load_metrics()
 
     cv_metrics = metrics["evaluation"]["cross_validation_mean_metrics"]
-    calibrated_metrics = metrics["evaluation"]["threshold_calibration"]["selected"]["metrics"]
-    weighted_gap = metrics["evaluation"]["threshold_calibration"]["selected"]["business_alignment"]["weighted_gap"]
+    threshold_calibration = metrics["evaluation"]["threshold_calibration"]["selected"]
+    calibrated_metrics = threshold_calibration["metrics"]
+    weighted_gap = threshold_calibration["business_alignment"]["weighted_gap"]
 
     assert cv_metrics["precision"] >= acceptance["min_cv_precision"]
     assert cv_metrics["recall"] >= acceptance["min_cv_recall"]
@@ -37,12 +37,16 @@ def test_metrics_meet_acceptance_thresholds():
     assert weighted_gap <= acceptance["max_business_weighted_gap"]
 
 
-def test_threshold_within_search_space():
+def test_threshold_selection_respects_recall_floor():
     params = load_params()
     evaluation = params["train"]["evaluation"]
     metrics = load_metrics()
 
-    threshold = metrics["evaluation"]["threshold_calibration"]["selected"]["threshold"]
-    assert evaluation["threshold_search_start"] <= threshold <= evaluation["threshold_search_end"]
-    assert evaluation["threshold_search_steps"] >= 2
+    calibration = metrics["evaluation"]["threshold_calibration"]
+    selected = calibration["selected"]
+
+    assert calibration["selection_rule"] == "maximize_precision_subject_to_recall"
+    assert 0.0 <= selected["threshold"] <= 1.0
+    assert selected["metrics"]["recall"] >= evaluation["target_recall"]
+    assert calibration["search_space"]["candidates"] >= 2
 

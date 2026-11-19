@@ -70,3 +70,26 @@ def test_seed_robustness_covers_configured_seeds(report, evaluation_config):
     assert robustness["precision_mean"] >= evaluation_config["target_precision"] - 0.05
     assert robustness["precision_std"] <= 0.05
     assert robustness["recall_std"] <= 0.05
+
+
+def test_threshold_trade_off_documents_recall_floors(report, evaluation_config):
+    trade_off = report["threshold_trade_off"]
+    expected_floors = [float(floor) for floor in evaluation_config["trade_off_recall_floors"]]
+
+    assert [row["recall_floor"] for row in trade_off] == expected_floors
+
+    feasible = [row for row in trade_off if row["precision"] is not None]
+    assert feasible, "Nenhum piso de recall factivel na fronteira"
+    # Pisos de recall mais exigentes nao podem elevar a precision maxima factivel.
+    precisions = [row["precision"] for row in feasible]
+    assert precisions == sorted(precisions, reverse=True)
+    for row in feasible:
+        assert row["recall"] >= row["recall_floor"]
+        assert 0.0 <= row["threshold"] <= 1.0
+
+
+def test_calibration_is_reported_in_report(report):
+    calibration = report["validation"]["calibration"]
+    assert calibration["enabled"] is True
+    assert calibration["method"] in {"sigmoid", "isotonic"}
+    assert report["validation"]["threshold_rule"] == "maximize_precision_subject_to_recall"

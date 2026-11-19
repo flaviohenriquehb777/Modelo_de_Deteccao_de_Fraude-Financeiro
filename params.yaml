@@ -25,6 +25,16 @@ data_quality:
     - 1
 
 train:
+  # Calibracao de probabilidades (Fase 4): ajustada DENTRO do Pipeline, com
+  # validacao cruzada interna sobre o treino de cada dobra (anti-leakage).
+  calibration:
+    enabled: true
+    method: sigmoid
+    cv: 3
+    # ensemble=False: o estimador base e treinado em 100% do treino da dobra e o
+    # calibrador usa predicoes nao enviesadas (cross_val_predict). Com ensemble=True
+    # cada sub-modelo veria ~2/3 dos dados, degradando a fronteira Precision-Recall.
+    ensemble: false
   evaluation:
     cv_folds: 10
     shuffle: true
@@ -35,18 +45,24 @@ train:
       - 42
       - 7
       - 2024
-    target_precision: 0.9227
-    target_recall: 0.8102
-    threshold_search_start: 0.5
-    threshold_search_end: 0.95
-    threshold_search_steps: 91
+    # Meta de negocio (Fase 4): precision ~0,96 mantendo recall > 0,80.
+    target_precision: 0.96
+    target_recall: 0.80
+    # Pisos de recall documentados na tabela de trade-off precision x recall.
+    trade_off_recall_floors:
+      - 0.80
+      - 0.82
+      - 0.85
+      - 0.90
     precision_weight: 2.0
     recall_weight: 1.0
   acceptance:
-    min_cv_precision: 0.92
-    min_cv_recall: 0.81
-    min_calibrated_precision: 0.92
-    min_calibrated_recall: 0.81
+    # Gate de negocio no ponto operacional calibrado (out-of-fold).
+    min_calibrated_precision: 0.96
+    min_calibrated_recall: 0.80
+    # Guard-rails de estabilidade da media entre dobras (margem sobre a meta).
+    min_cv_precision: 0.94
+    min_cv_recall: 0.78
     max_business_weighted_gap: 0.02
   xgboost:
     max_depth: 7

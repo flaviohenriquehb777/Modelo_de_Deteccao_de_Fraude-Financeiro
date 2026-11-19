@@ -10,6 +10,7 @@ import pandas as pd
 import seaborn as sns
 import shap
 import yaml
+from sklearn.calibration import CalibratedClassifierCV
 
 warnings.filterwarnings("ignore")
 
@@ -105,8 +106,22 @@ class FraudSHAPExplainer:
     def _resolve_classifier(self):
         steps = getattr(self.pipeline, "named_steps", None)
         if steps and "classifier" in steps:
-            return steps["classifier"]
+            return self._unwrap_calibrated(steps["classifier"])
         return self.pipeline
+
+    @staticmethod
+    def _unwrap_calibrated(estimator):
+        """Extrai o estimador base quando o passo final e um CalibratedClassifierCV.
+
+        A calibracao apenas reescala as probabilidades de saida; o SHAP explica o
+        modelo subjacente (arvore), portanto devolvemos o estimador interno.
+        """
+        if isinstance(estimator, CalibratedClassifierCV):
+            calibrated = estimator.calibrated_classifiers_[0]
+            if hasattr(calibrated, "estimator"):
+                return calibrated.estimator
+            return getattr(calibrated, "base_estimator", calibrated)
+        return estimator
 
     def generate_shap_analysis(self) -> None:
         print("Gerando analise SHAP...")

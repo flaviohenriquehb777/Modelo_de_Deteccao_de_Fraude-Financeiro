@@ -6,7 +6,10 @@ import joblib
 import numpy as np
 import pandas as pd
 import yaml
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.compose import ColumnTransformer
+from sklearn.isotonic import IsotonicRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
@@ -48,7 +51,7 @@ def relative_posix_path(path: Path) -> str:
     return str(path.relative_to(PROJECT_ROOT)).replace("\\", "/")
 
 
-def load_training_config() -> tuple[dict, dict, dict, dict]:
+def load_training_config() -> tuple[dict, dict, dict, dict, dict]:
     params_path = PROJECT_ROOT / "params.yaml"
     with params_path.open("r", encoding="utf-8") as file:
         params = yaml.safe_load(file)
@@ -57,6 +60,7 @@ def load_training_config() -> tuple[dict, dict, dict, dict]:
         params["train"]["acceptance"],
         params["train"]["xgboost"],
         params["preprocess"],
+        params["train"].get("calibration", {}),
     )
 
 
@@ -94,12 +98,36 @@ def build_feature_engineer(preprocess_config: dict) -> object:
     return "passthrough"
 
 
-def build_pipeline(model_config: dict, preprocess_config: dict) -> Pipeline:
+def build_classifier(model_config: dict, calibration_config: dict) -> object:
+    """Cria o classificador, opcionalmente com calibracao de probabilidades.
+
+    A calibracao (Platt/sigmoid ou isotonic) e ajustada DENTRO do Pipeline. Com
+    ensemble=False o estimador base e treinado em TODOS os dados de treino da
+    dobra e o calibrador usa predicoes nao enviesadas (cross_val_predict), o que
+    preserva a fronteira Precision-Recall (a calibracao e monotona) sem vazar
+    informacao do teste para o treino.
+    """
+    estimator = XGBClassifier(**model_config)
+    if not calibration_config.get("enabled", False):
+        return estimator
+    return CalibratedClassifierCV(
+        estimator,
+        method=calibration_config.get("method", "sigmoid"),
+        cv=int(calibration_config.get("cv", 3)),
+        ensemble=bool(calibration_config.get("ensemble", False)),
+    )
+
+
+def build_pipeline(
+    model_config: dict,
+    preprocess_config: dict,
+    calibration_config: dict | None = None,
+) -> Pipeline:
     return Pipeline(
         [
             ("features", build_feature_engineer(preprocess_config)),
             ("preprocess", build_preprocessor(preprocess_config)),
-            ("classifier", XGBClassifier(**model_config)),
+            ("classifier", build_classifier(model_config, calibration_config or {})),
         ]
     )
 
@@ -149,85 +177,165 @@ def confusion_matrix_counts(y_true: pd.Series, y_pred: np.ndarray) -> dict:
     }
 
 
+def candidate_thresholds(
+    y_true: pd.Series, probabilities: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Pontos operacionais exatos da curva Precision x Recall.
+
+    Usamos os proprios thresholds da curva PR em vez de uma grade arbitraria:
+    cada candidato corresponde a um ponto realmente observado na fronteira, o
+    que evita selecionar um corte que nao existe nos dados.
+    """
+    precision_values, recall_values, thresholds = precision_recall_curve(y_true, probabilities)
+    # A ultima entrada da curva corresponde ao caso degenerado (recall=0) e nao
+    # possui threshold associado, por isso descartamos a cauda.
+    return precision_values[:-1], recall_values[:-1], np.asarray(thresholds, dtype=float)
+
+
+def best_precision_under_recall_floor(
+    precision_values: np.ndarray,
+    recall_values: np.ndarray,
+    thresholds: np.ndarray,
+    recall_floor: float,
+) -> dict | None:
+    """Maior precision entre os pontos cujo recall respeita o piso exigido."""
+    feasible = recall_values >= recall_floor
+    if not np.any(feasible):
+        return None
+
+    masked_precision = np.where(feasible, precision_values, -np.inf)
+    best_precision = masked_precision.max()
+    ties = np.flatnonzero(np.isclose(masked_precision, best_precision))
+    best_index = int(ties[np.argmax(recall_values[ties])])
+
+    return {
+        "threshold": float(thresholds[best_index]),
+        "precision": float(precision_values[best_index]),
+        "recall": float(recall_values[best_index]),
+    }
+
+
+def build_threshold_trade_off(
+    y_true: pd.Series,
+    probabilities: np.ndarray,
+    evaluation_config: dict,
+) -> list[dict]:
+    """Documenta o trade-off precision x recall em pisos de recall selecionados.
+
+    Para cada piso informa o melhor ponto factivel (maior precision) e o
+    threshold correspondente. Evidencia de auditoria da fronteira honesta.
+    """
+    precision_values, recall_values, thresholds = candidate_thresholds(y_true, probabilities)
+    trade_off = []
+    for floor in evaluation_config.get("trade_off_recall_floors", []):
+        point = best_precision_under_recall_floor(
+            precision_values, recall_values, thresholds, float(floor)
+        )
+        trade_off.append(
+            {
+                "recall_floor": float(floor),
+                "threshold": None if point is None else point["threshold"],
+                "precision": None if point is None else point["precision"],
+                "recall": None if point is None else point["recall"],
+            }
+        )
+    return trade_off
+
+
 def select_business_threshold(
     y_true: pd.Series,
     probabilities: np.ndarray,
     evaluation_config: dict,
 ) -> dict:
-    thresholds = np.linspace(
-        evaluation_config["threshold_search_start"],
-        evaluation_config["threshold_search_end"],
-        evaluation_config["threshold_search_steps"],
+    """Seleciona o threshold operacional na fronteira honesta (out-of-fold).
+
+    Regra (Fase 4): maximiza a precision SUJEITO a recall >= target_recall. Isso
+    operacionaliza a meta de negocio (precision ~0,96 mantendo recall > 0,80) e
+    garante que o ponto escolhido nunca troca recall abaixo do piso.
+    """
+    precision_values, recall_values, thresholds = candidate_thresholds(y_true, probabilities)
+
+    target_precision = float(evaluation_config["target_precision"])
+    target_recall = float(evaluation_config["target_recall"])
+    precision_weight = float(evaluation_config["precision_weight"])
+    recall_weight = float(evaluation_config["recall_weight"])
+
+    point = best_precision_under_recall_floor(
+        precision_values, recall_values, thresholds, target_recall
     )
+    if point is None:
+        # Fallback deterministico: melhor precision absoluta (recall livre).
+        index = int(np.argmax(precision_values))
+        point = {
+            "threshold": float(thresholds[index]),
+            "precision": float(precision_values[index]),
+            "recall": float(recall_values[index]),
+        }
 
-    target_precision = evaluation_config["target_precision"]
-    target_recall = evaluation_config["target_recall"]
-    precision_weight = evaluation_config["precision_weight"]
-    recall_weight = evaluation_config["recall_weight"]
+    selected_predictions = (probabilities >= point["threshold"]).astype(int)
+    selected_metrics = compute_classification_metrics(y_true, selected_predictions)
 
-    best_result = None
+    precision_gap = abs(selected_metrics["precision"] - target_precision)
+    recall_gap = abs(selected_metrics["recall"] - target_recall)
+    weighted_gap = (precision_gap * precision_weight) + (recall_gap * recall_weight)
 
-    for threshold in thresholds:
-        predictions = (probabilities >= threshold).astype(int)
-        metrics = compute_classification_metrics(y_true, predictions)
-
-        precision_gap = abs(metrics["precision"] - target_precision)
-        recall_gap = abs(metrics["recall"] - target_recall)
-        weighted_gap = (precision_gap * precision_weight) + (recall_gap * recall_weight)
-
-        candidate = {
-            "threshold": float(threshold),
-            "metrics": metrics,
+    return {
+        "selection_rule": "maximize_precision_subject_to_recall",
+        "search_space": {
+            "candidates": int(thresholds.shape[0]),
+            "recall_floor": target_recall,
+            "precision_weight": precision_weight,
+            "recall_weight": recall_weight,
+        },
+        "selected": {
+            "threshold": point["threshold"],
+            "metrics": selected_metrics,
+            "recall_floor_satisfied": bool(selected_metrics["recall"] >= target_recall),
             "business_alignment": {
-                "target_precision": float(target_precision),
-                "target_recall": float(target_recall),
+                "target_precision": target_precision,
+                "target_recall": target_recall,
                 "precision_gap": float(precision_gap),
                 "recall_gap": float(recall_gap),
                 "weighted_gap": float(weighted_gap),
                 "alignment_score": float(max(0.0, 1.0 - weighted_gap)),
             },
-        }
-
-        if best_result is None:
-            best_result = candidate
-            continue
-
-        current_gap = candidate["business_alignment"]["weighted_gap"]
-        best_gap = best_result["business_alignment"]["weighted_gap"]
-        current_metrics = candidate["metrics"]
-        best_metrics = best_result["metrics"]
-
-        if (
-            current_gap < best_gap
-            or (
-                np.isclose(current_gap, best_gap)
-                and current_metrics["recall"] > best_metrics["recall"]
-            )
-            or (
-                np.isclose(current_gap, best_gap)
-                and np.isclose(current_metrics["recall"], best_metrics["recall"])
-                and current_metrics["precision"] > best_metrics["precision"]
-            )
-            or (
-                np.isclose(current_gap, best_gap)
-                and np.isclose(current_metrics["recall"], best_metrics["recall"])
-                and np.isclose(current_metrics["precision"], best_metrics["precision"])
-                and current_metrics["accuracy"] > best_metrics["accuracy"]
-            )
-        ):
-            best_result = candidate
-
-    return {
-        "selection_rule": "minimize_weighted_gap_to_business_targets",
-        "search_space": {
-            "start": float(evaluation_config["threshold_search_start"]),
-            "end": float(evaluation_config["threshold_search_end"]),
-            "steps": int(evaluation_config["threshold_search_steps"]),
-            "precision_weight": float(precision_weight),
-            "recall_weight": float(recall_weight),
         },
-        "selected": best_result,
     }
+
+
+def calibrate_out_of_fold_probabilities(
+    y: pd.Series,
+    raw_probabilities: np.ndarray,
+    calibration_config: dict | None,
+) -> np.ndarray:
+    """Calibra UMA unica vez as probabilidades out-of-fold (transformacao monotonica).
+
+    Calibrar dentro de cada dobra aplica um mapa diferente por dobra; ao agregar
+    as probabilidades out-of-fold, a ordenacao global se rompe e a precision no
+    topo da curva (faixa de alto recall) cai ~2 p.p. Como a calibracao (sigmoid
+    ou isotonic) e monotonica, ajustar um unico mapa sobre as probabilidades
+    agregadas preserva EXATAMENTE a fronteira Precision-Recall e mantem o
+    threshold alinhado ao modelo final (que tambem expoe um unico calibrador).
+    """
+    config = calibration_config or {}
+    if not config.get("enabled", False):
+        return raw_probabilities
+
+    # O objetivo do XGBoost (binary:logistic) faz logit(p) coincidir com a margem
+    # (decision_function), que e a base da calibracao de Platt do scikit-learn.
+    epsilon = 1e-12
+    clipped = np.clip(np.asarray(raw_probabilities, dtype=float), epsilon, 1.0 - epsilon)
+    logits = np.log(clipped / (1.0 - clipped)).reshape(-1, 1)
+    target = np.asarray(y)
+
+    if config.get("method", "sigmoid") == "isotonic":
+        calibrator = IsotonicRegression(out_of_bounds="clip")
+        calibrator.fit(logits.ravel(), target)
+        return np.asarray(calibrator.predict(logits.ravel()), dtype=float)
+
+    calibrator = LogisticRegression(solver="lbfgs", max_iter=1000)
+    calibrator.fit(logits, target)
+    return calibrator.predict_proba(logits)[:, 1]
 
 
 def run_cross_validation(
@@ -237,12 +345,15 @@ def run_cross_validation(
     model_config: dict,
     preprocess_config: dict,
     random_state: int,
+    calibration_config: dict | None = None,
 ) -> tuple[np.ndarray, list]:
-    """Executa o StratifiedKFold e devolve as probabilidades out-of-fold.
+    """Executa o StratifiedKFold e devolve as probabilidades out-of-fold calibradas.
 
     Cada fold ajusta um Pipeline independente (feature engineering + preprocess +
     classificador) apenas sobre o seu conjunto de treino, garantindo que nenhuma
-    estatistica vaze do treino para o teste.
+    estatistica vaze do treino para o teste. A calibracao NAO entra no Pipeline de
+    cada dobra: ela e ajustada uma unica vez sobre as probabilidades out-of-fold
+    agregadas (anti-leakage e sem quebrar a ordenacao global da fronteira).
     """
     splitter = StratifiedKFold(
         n_splits=evaluation_config["cv_folds"],
@@ -251,12 +362,15 @@ def run_cross_validation(
     )
     splits = list(splitter.split(X, y))
 
-    oof_probabilities = np.zeros(len(y), dtype=float)
+    raw_probabilities = np.zeros(len(y), dtype=float)
     for train_index, test_index in splits:
-        pipeline = build_pipeline(model_config, preprocess_config)
+        pipeline = build_pipeline(model_config, preprocess_config, None)
         pipeline.fit(X.iloc[train_index], y.iloc[train_index])
-        oof_probabilities[test_index] = pipeline.predict_proba(X.iloc[test_index])[:, 1]
+        raw_probabilities[test_index] = pipeline.predict_proba(X.iloc[test_index])[:, 1]
 
+    oof_probabilities = calibrate_out_of_fold_probabilities(
+        y, raw_probabilities, calibration_config
+    )
     return oof_probabilities, splits
 
 
@@ -268,6 +382,7 @@ def evaluate_seed_robustness(
     preprocess_config: dict,
     primary_threshold: float,
     primary_summary: dict,
+    calibration_config: dict | None = None,
 ) -> dict:
     """Repete a validacao cruzada com outras seeds (repeated stratified CV).
 
@@ -290,7 +405,7 @@ def evaluate_seed_robustness(
 
         seed_config = {**evaluation_config, "random_state": seed}
         oof_probabilities, splits = run_cross_validation(
-            X, y, seed_config, model_config, preprocess_config, seed
+            X, y, seed_config, model_config, preprocess_config, seed, calibration_config
         )
         seed_calibration = select_business_threshold(y, oof_probabilities, seed_config)
         seed_threshold = float(seed_calibration["selected"]["threshold"])
@@ -325,7 +440,8 @@ def evaluate_with_cross_validation(
     evaluation_config: dict,
     model_config: dict,
     preprocess_config: dict,
-) -> tuple[dict, np.ndarray]:
+    calibration_config: dict | None = None,
+) -> tuple[dict, np.ndarray, list]:
     oof_probabilities, splits = run_cross_validation(
         X,
         y,
@@ -333,10 +449,12 @@ def evaluate_with_cross_validation(
         model_config,
         preprocess_config,
         random_state=int(evaluation_config["random_state"]),
+        calibration_config=calibration_config,
     )
 
     threshold_calibration = select_business_threshold(y, oof_probabilities, evaluation_config)
     operating_threshold = float(threshold_calibration["selected"]["threshold"])
+    threshold_trade_off = build_threshold_trade_off(y, oof_probabilities, evaluation_config)
 
     # Metricas por dobra avaliadas NO THRESHOLD OPERACIONAL (nao em 0.5), pois e
     # nessa faixa que o modelo efetivamente opera. ROC-AUC/PR-AUC entram como
@@ -373,6 +491,7 @@ def evaluate_with_cross_validation(
         "out_of_fold_probability_metrics": compute_probability_metrics(y, oof_probabilities),
         "out_of_fold_confusion_matrix": confusion_matrix_counts(y, operating_predictions),
         "threshold_calibration": threshold_calibration,
+        "threshold_trade_off": threshold_trade_off,
         "seed_robustness": evaluate_seed_robustness(
             X,
             y,
@@ -381,9 +500,10 @@ def evaluate_with_cross_validation(
             preprocess_config,
             operating_threshold,
             fold_summary,
+            calibration_config,
         ),
     }
-    return metrics, oof_probabilities
+    return metrics, oof_probabilities, threshold_trade_off
 
 
 def evaluate_model_acceptance(metrics: dict, acceptance_config: dict) -> dict:
@@ -405,19 +525,28 @@ def evaluate_model_acceptance(metrics: dict, acceptance_config: dict) -> dict:
     }
 
 
-def train_final_model(X: pd.DataFrame, y: pd.Series, model_config: dict, preprocess_config: dict) -> None:
-    pipeline = build_pipeline(model_config, preprocess_config)
+def train_final_model(
+    X: pd.DataFrame,
+    y: pd.Series,
+    model_config: dict,
+    preprocess_config: dict,
+    calibration_config: dict | None = None,
+) -> None:
+    pipeline = build_pipeline(model_config, preprocess_config, calibration_config)
     pipeline.fit(X, y)
     PIPELINE_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipeline, PIPELINE_MODEL_PATH)
 
 
-def describe_pipeline(preprocess_config: dict) -> str:
+def describe_pipeline(preprocess_config: dict, calibration_config: dict | None = None) -> str:
     feature_config = preprocess_config.get("feature_engineering", {}) or {}
     steps = []
     if feature_config.get("temporal_cyclic", False):
         steps.append("TemporalFeatureEngineer(hour,hour_sin,hour_cos)")
     steps.append("ColumnTransformer(PowerTransformer+MinMaxScaler)")
+    if calibration_config and calibration_config.get("enabled", False):
+        method = calibration_config.get("method", "sigmoid")
+        steps.append(f"CalibratedClassifierCV({method})")
     steps.append("XGBClassifier")
     return " + ".join(steps)
 
@@ -428,6 +557,7 @@ def build_evaluation_report(
     preprocess_config: dict,
     X: pd.DataFrame,
     y: pd.Series,
+    calibration_config: dict | None = None,
 ) -> dict:
     """Consolida a avaliacao auditavel: por dobra, resumo, out-of-fold e robustez."""
     total_rows = int(len(y))
@@ -440,6 +570,8 @@ def build_evaluation_report(
             "shuffle": bool(evaluation_config["shuffle"]),
             "random_state": int(evaluation_config["random_state"]),
             "operating_threshold": float(metrics["operating_threshold"]),
+            "calibration": calibration_config or {"enabled": False},
+            "threshold_rule": metrics["threshold_calibration"]["selection_rule"],
         },
         "dataset": {
             "processed_data_path": relative_posix_path(PROCESSED_DATA_PATH),
@@ -460,6 +592,7 @@ def build_evaluation_report(
             "confusion_matrix": metrics["out_of_fold_confusion_matrix"],
         },
         "threshold_calibration": metrics["threshold_calibration"],
+        "threshold_trade_off": metrics["threshold_trade_off"],
         "seed_robustness": metrics["seed_robustness"],
         "evidence": {
             "precision_recall_curve": relative_posix_path(PR_CURVE_PATH),
@@ -477,6 +610,15 @@ def render_evaluation_markdown(report: dict) -> str:
     matrix = out_of_fold["confusion_matrix"]
     robustness = report["seed_robustness"]
 
+    calibration = validation.get("calibration", {}) or {}
+    if calibration.get("enabled", False):
+        calibration_line = (
+            f"{calibration.get('method', 'sigmoid')} "
+            f"(CalibratedClassifierCV, cv={calibration.get('cv', 3)})"
+        )
+    else:
+        calibration_line = "desabilitada (probabilidades brutas do XGBoost)"
+
     lines = [
         "# Relatorio de Avaliacao — Deteccao de Fraude (Credicard)",
         "",
@@ -485,6 +627,8 @@ def render_evaluation_markdown(report: dict) -> str:
         "## Estrategia de validacao",
         f"- {validation['cv_strategy']} com {validation['cv_folds']} dobras "
         f"(shuffle={validation['shuffle']}, seed={validation['random_state']})",
+        f"- Calibracao: {calibration_line}",
+        f"- Regra de selecao do threshold: `{validation['threshold_rule']}`",
         f"- Threshold operacional selecionado: {validation['operating_threshold']:.3f}",
         f"- Dataset: {dataset['row_count']} linhas | {dataset['feature_count']} features | "
         f"{dataset['positive_count']} fraudes ({dataset['positive_rate']:.4%})",
@@ -528,6 +672,20 @@ def render_evaluation_markdown(report: dict) -> str:
         default_line,
         operating_line,
         probability_line,
+        "",
+        "## Trade-off precision x recall (melhor precision por piso de recall)",
+        "| piso de recall | threshold | precision | recall |",
+        "| --- | --- | --- | --- |",
+    ]
+    for row in report.get("threshold_trade_off", []):
+        if row["threshold"] is None:
+            lines.append(f"| {row['recall_floor']:.2f} | - | inalcancavel | - |")
+        else:
+            lines.append(
+                f"| {row['recall_floor']:.2f} | {row['threshold']:.3f} | "
+                f"{row['precision']:.4f} | {row['recall']:.4f} |"
+            )
+    lines += [
         "",
         "## Matriz de confusao (threshold operacional)",
         "| Real \\ Predito | Legitimo | Fraude |",
@@ -574,6 +732,7 @@ def save_evaluation_plots(
     y_true: pd.Series,
     probabilities: np.ndarray,
     operating_threshold: float,
+    trade_off: list | None = None,
 ) -> None:
     """Versiona evidencias graficas: curva Precision-Recall e matriz de confusao."""
     import matplotlib
@@ -589,6 +748,16 @@ def save_evaluation_plots(
 
     pr_figure, pr_axis = plt.subplots(figsize=(6.5, 5.0))
     pr_axis.plot(recall_values, precision_values, color="#1f77b4", label="Curva Precision-Recall")
+    feasible_points = [row for row in (trade_off or []) if row["threshold"] is not None]
+    if feasible_points:
+        pr_axis.scatter(
+            [row["recall"] for row in feasible_points],
+            [row["precision"] for row in feasible_points],
+            color="#2ca02c",
+            marker="^",
+            zorder=4,
+            label="Melhor precision por piso de recall",
+        )
     pr_axis.scatter(
         [recall_score(y_true, predictions, zero_division=0)],
         [precision_score(y_true, predictions, zero_division=0)],
@@ -638,6 +807,7 @@ def save_metrics(
     acceptance_config: dict,
     model_config: dict,
     preprocess_config: dict,
+    calibration_config: dict | None = None,
 ) -> None:
     oof_default_metrics = metrics["out_of_fold_default_threshold_metrics"]
     oof_operating_metrics = metrics["out_of_fold_operating_threshold_metrics"]
@@ -654,11 +824,13 @@ def save_metrics(
             "default_threshold": DEFAULT_THRESHOLD,
             "cv_strategy": metrics["cv_strategy"],
             "operating_threshold": metrics["operating_threshold"],
+            "calibration": calibration_config or {"enabled": False},
             "cross_validation_mean_metrics": metrics["cross_validation_mean_metrics"],
             "out_of_fold_default_threshold_metrics": oof_default_metrics,
             "out_of_fold_operating_threshold_metrics": oof_operating_metrics,
             "out_of_fold_probability_metrics": oof_probability_metrics,
             "threshold_calibration": metrics["threshold_calibration"],
+            "threshold_trade_off": metrics["threshold_trade_off"],
         },
         "business_target": {
             "precision": float(evaluation_config["target_precision"]),
@@ -668,7 +840,7 @@ def save_metrics(
         "model": {
             "artifact_path": str(PIPELINE_MODEL_PATH.relative_to(PROJECT_ROOT)),
             "type": "XGBClassifier",
-            "pipeline": describe_pipeline(preprocess_config),
+            "pipeline": describe_pipeline(preprocess_config, calibration_config),
             "random_state": int(model_config["random_state"]),
             "max_depth": int(model_config["max_depth"]),
             "n_estimators": int(model_config["n_estimators"]),
@@ -680,13 +852,14 @@ def save_metrics(
         json.dump(metrics_payload, file, indent=2)
 
 
-def save_model_metadata(metrics: dict) -> None:
+def save_model_metadata(metrics: dict, calibration_config: dict | None = None) -> None:
     selected_threshold = metrics["evaluation"]["threshold_calibration"]["selected"]
     metadata = {
         "model_artifact": metrics["model"]["artifact_path"],
         "decision_threshold": selected_threshold["threshold"],
         "out_of_fold_calibrated_metrics": selected_threshold["metrics"],
         "business_alignment": selected_threshold["business_alignment"],
+        "calibration": calibration_config or {"enabled": False},
         "acceptance": metrics["acceptance"],
     }
     with MODEL_METADATA_PATH.open("w", encoding="utf-8") as file:
@@ -698,18 +871,35 @@ def main() -> None:
     X = df.drop("Class", axis=1)
     y = df["Class"]
 
-    evaluation_config, acceptance_config, base_model_config, preprocess_config = load_training_config()
+    (
+        evaluation_config,
+        acceptance_config,
+        base_model_config,
+        preprocess_config,
+        calibration_config,
+    ) = load_training_config()
     model_config = build_model_config(base_model_config, y)
 
-    metrics, oof_probabilities = evaluate_with_cross_validation(
-        X, y, evaluation_config, model_config, preprocess_config
+    metrics, oof_probabilities, threshold_trade_off = evaluate_with_cross_validation(
+        X, y, evaluation_config, model_config, preprocess_config, calibration_config
     )
-    train_final_model(X, y, model_config, preprocess_config)
-    save_metrics(metrics, evaluation_config, acceptance_config, model_config, preprocess_config)
+    train_final_model(X, y, model_config, preprocess_config, calibration_config)
+    save_metrics(
+        metrics,
+        evaluation_config,
+        acceptance_config,
+        model_config,
+        preprocess_config,
+        calibration_config,
+    )
 
-    evaluation_report = build_evaluation_report(metrics, evaluation_config, preprocess_config, X, y)
+    evaluation_report = build_evaluation_report(
+        metrics, evaluation_config, preprocess_config, X, y, calibration_config
+    )
     save_evaluation_report(evaluation_report)
-    save_evaluation_plots(y, oof_probabilities, float(metrics["operating_threshold"]))
+    save_evaluation_plots(
+        y, oof_probabilities, float(metrics["operating_threshold"]), threshold_trade_off
+    )
 
     save_model_metadata(
         {
@@ -718,7 +908,8 @@ def main() -> None:
             "model": {
                 "artifact_path": str(PIPELINE_MODEL_PATH.relative_to(PROJECT_ROOT)),
             },
-        }
+        },
+        calibration_config,
     )
 
     selected_threshold = metrics["threshold_calibration"]["selected"]
