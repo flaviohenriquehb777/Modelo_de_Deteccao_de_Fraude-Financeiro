@@ -1,4 +1,5 @@
 import json
+import random
 import sys
 import warnings
 from pathlib import Path
@@ -10,6 +11,7 @@ import pandas as pd
 import seaborn as sns
 import shap
 import yaml
+from sklearn.calibration import CalibratedClassifierCV
 
 warnings.filterwarnings("ignore")
 
@@ -59,8 +61,14 @@ def build_analysis_sample(data: pd.DataFrame, sample_size: int, random_state: in
 
 
 class FraudSHAPExplainer:
-    def __init__(self, model_path: Path, data_path: Path, output_dir: Path, explainability_config: dict):
-        self.model = joblib.load(model_path)
+    def __init__(
+        self,
+        model_path: Path,
+        data_path: Path,
+        output_dir: Path,
+        explainability_config: dict,
+    ):
+        self.pipeline = joblib.load(model_path)
         self.data = pd.read_parquet(data_path)
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -71,16 +79,74 @@ class FraudSHAPExplainer:
             explainability_config["sample_size"],
             explainability_config["random_state"],
         )
-        self.X = sampled_data.drop("Class", axis=1)
+        raw_features = sampled_data.drop("Class", axis=1)
         self.y = sampled_data["Class"]
 
+        self.feature_engineer = self._resolve_step("features")
+        self.preprocessor = self._resolve_step("preprocess")
+        self.classifier = self._resolve_classifier()
+
+        # O artefato de producao e um Pipeline que recebe features BRUTAS. Para o
+        # SHAP precisamos explicar o classificador, entao aplicamos as etapas do
+        # proprio Pipeline (engenharia de features + pre-processamento, ajustadas
+        # no treino) na mesma ordem em que o modelo as aplica.
+        engineered_features = raw_features
+        if self.feature_engineer is not None:
+            engineered_features = self.feature_engineer.transform(raw_features)
+
+        if self.preprocessor is not None:
+            transformed = self.preprocessor.transform(engineered_features)
+            feature_names = list(self.preprocessor.get_feature_names_out())
+            self.X = pd.DataFrame(transformed, columns=feature_names, index=raw_features.index)
+        else:
+            self.X = engineered_features
+
         print(f"Dados carregados para explainability: {self.X.shape}")
-        print(f"Modelo carregado: {type(self.model).__name__}")
+        print(f"Classificador explicado: {type(self.classifier).__name__}")
+
+    def _resolve_step(self, step_name: str):
+        steps = getattr(self.pipeline, "named_steps", None)
+        if steps and step_name in steps:
+            return steps[step_name]
+        return None
+
+    def _resolve_classifier(self):
+        steps = getattr(self.pipeline, "named_steps", None)
+        if steps and "classifier" in steps:
+            return self._unwrap_calibrated(steps["classifier"])
+        return self.pipeline
+
+    @staticmethod
+    def _unwrap_calibrated(estimator):
+        """Extrai o estimador base quando o passo final e um CalibratedClassifierCV.
+
+        A calibracao apenas reescala as probabilidades de saida; o SHAP explica o
+        modelo subjacente (arvore), portanto devolvemos o estimador interno.
+        """
+        if isinstance(estimator, CalibratedClassifierCV):
+            calibrated = estimator.calibrated_classifiers_[0]
+            if hasattr(calibrated, "estimator"):
+                return calibrated.estimator
+            return getattr(calibrated, "base_estimator", calibrated)
+        return estimator
+
+    def _seed_randomness(self) -> None:
+        """Fixa as sementes dos geradores usados internamente pelo SHAP.
+
+        Os plots beeswarm (`summary_plot`), de dependencia e o `force_plot` usam
+        `np.random` e `random` (jitter, embaralhamento e ids do HTML). Sem fixar
+        as sementes os PNGs/HTML mudam a cada execucao, quebrando a idempotencia
+        do pipeline DVC. Usamos o `random_state` da configuracao de explainability.
+        """
+        random_state = self.explainability_config["random_state"]
+        np.random.seed(random_state)
+        random.seed(random_state)
 
     def generate_shap_analysis(self) -> None:
         print("Gerando analise SHAP...")
+        self._seed_randomness()
 
-        self.explainer = shap.TreeExplainer(self.model)
+        self.explainer = shap.TreeExplainer(self.classifier)
         shap_values = self.explainer.shap_values(self.X)
         if isinstance(shap_values, list):
             shap_values = shap_values[1]
@@ -119,11 +185,15 @@ class FraudSHAPExplainer:
         importance_df.to_csv(self.output_dir / "feature_importance_ranking.csv", index=False)
         return importance_df
 
-    def _generate_dependence_plots(self, shap_values: np.ndarray, importance_df: pd.DataFrame) -> None:
+    def _generate_dependence_plots(
+        self, shap_values: np.ndarray, importance_df: pd.DataFrame
+    ) -> None:
         dependence_dir = self.output_dir / "dependence_plots"
         dependence_dir.mkdir(exist_ok=True)
 
-        top_features = importance_df.head(self.explainability_config["top_features"])["feature"].tolist()
+        top_features = (
+            importance_df.head(self.explainability_config["top_features"])["feature"].tolist()
+        )
         for feature in top_features:
             plt.figure(figsize=(10, 6))
             shap.dependence_plot(feature, shap_values, self.X, show=False)
@@ -160,8 +230,16 @@ class FraudSHAPExplainer:
             top_features.append(
                 {
                     "feature": feature_name,
-                    "importance": float(importance_df.loc[importance_df["feature"] == feature_name, "importance"].iloc[0]),
-                    "direction": "positive" if float(np.mean(shap_values[:, feature_position])) > 0 else "negative",
+                    "importance": float(
+                        importance_df.loc[
+                            importance_df["feature"] == feature_name, "importance"
+                        ].iloc[0]
+                    ),
+                    "direction": (
+                        "positive"
+                        if float(np.mean(shap_values[:, feature_position])) > 0
+                        else "negative"
+                    ),
                 }
             )
 
@@ -188,7 +266,9 @@ class FraudSHAPExplainer:
             "model_path": str(PIPELINE_MODEL_PATH.relative_to(PROJECT_ROOT)),
             "data_path": str(PROCESSED_DATA_PATH.relative_to(PROJECT_ROOT)),
             "sample_size": int(len(self.X)),
-            "top_features": importance_df.head(self.explainability_config["top_features"])["feature"].tolist(),
+            "top_features": (
+                importance_df.head(self.explainability_config["top_features"])["feature"].tolist()
+            ),
             "decision_threshold": model_metadata.get("decision_threshold"),
             "generated_files": sorted(
                 str(path.relative_to(PROJECT_ROOT)).replace("\\", "/")

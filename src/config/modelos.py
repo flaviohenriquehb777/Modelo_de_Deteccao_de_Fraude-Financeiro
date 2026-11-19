@@ -1,7 +1,6 @@
 import pandas as pd
-
 from sklearn.compose import TransformedTargetRegressor
-from sklearn.model_selection import KFold, cross_validate, GridSearchCV
+from sklearn.model_selection import GridSearchCV, KFold, cross_validate
 from sklearn.pipeline import Pipeline
 
 RANDOM_STATE = 42
@@ -90,7 +89,7 @@ def grid_search_cv_regressor(
 
 def organiza_resultados(resultados):
 
-    for chave, valor in resultados.items():
+    for chave in resultados:
         resultados[chave]["time_seconds"] = (
             resultados[chave]["fit_time"] + resultados[chave]["score_time"]
         )

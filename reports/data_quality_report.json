@@ -4,7 +4,10 @@
   "output_path": "dados/credicard_tratado.parquet",
   "preprocess": {
     "time_scaler": "minmax",
-    "amount_transform": "yeo-johnson"
+    "amount_transform": "yeo-johnson",
+    "feature_engineering": {
+      "temporal_cyclic": true
+    }
   },
   "raw_dataset": {
     "row_count": 284807,
@@ -17,8 +20,17 @@
     "column_count": 31,
     "null_count": 0,
     "time_min": 0.0,
-    "time_max": 1.0,
-    "amount_mean": -1.7723214650060398e-16,
-    "amount_std": 1.000001755579451
+    "time_max": 172792.0,
+    "amount_mean": 88.34961925093134,
+    "amount_std": 250.12010924018855,
+    "features_are_raw": true,
+    "preprocessing_stage": "training_pipeline",
+    "preprocess_recipe": {
+      "time_scaler": "minmax",
+      "amount_transform": "yeo-johnson",
+      "feature_engineering": {
+        "temporal_cyclic": true
+      }
+    }
   }
 }

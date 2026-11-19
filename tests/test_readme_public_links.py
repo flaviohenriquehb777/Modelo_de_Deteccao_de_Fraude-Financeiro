@@ -1,5 +1,7 @@
 from src.config.paths import PROJECT_ROOT
 
+DAGSHUB_BASE = "https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro"
+
 
 def test_readme_does_not_use_local_file_links():
     content = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
@@ -8,5 +10,5 @@ def test_readme_does_not_use_local_file_links():
 
 def test_readme_exposes_public_dagshub_links():
     content = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-    assert "https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/experiments" in content
-    assert "https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/models" in content
+    assert f"{DAGSHUB_BASE}/experiments" in content
+    assert f"{DAGSHUB_BASE}/models" in content

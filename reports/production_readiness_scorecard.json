@@ -8,19 +8,38 @@
     "acceptance_passed": true,
     "decision_threshold_versioned": true,
     "operational_model_present": true,
-    "calibrated_precision": 0.9264367816091954,
-    "calibrated_recall": 0.8191056910569106,
-    "alignment_score": 0.9836207457246986
+    "validation_strategy": "StratifiedKFold",
+    "operating_threshold": 0.5660155840419437,
+    "calibrated_precision": 0.9610705596107056,
+    "calibrated_recall": 0.8028455284552846,
+    "alignment_score": 0.9950133523233041,
+    "business_target": {
+      "precision": 0.96,
+      "recall": 0.8
+    },
+    "aspirational_target": {
+      "target_precision": 0.96,
+      "target_recall": 0.82,
+      "blocking": false,
+      "best_feasible": {
+        "threshold": 0.18589901981463133,
+        "precision": 0.9140271493212669,
+        "recall": 0.8211382113821138
+      },
+      "precision_gap": 0.045972850678733024,
+      "simultaneously_achievable": false
+    }
   },
   "data_readiness": {
     "quality_report_passed": true,
     "processed_rows": 284807,
     "null_count": 0,
-    "time_scaled_to_unit_interval": true
+    "features_are_raw": true,
+    "preprocessing_stage": "training_pipeline"
   },
   "public_evidence": {
     "public_experiments": 7,
-    "public_models": 3,
+    "public_models": 1,
     "best_public_model_id": "m-695031f059db422fb7c12c7e47ef58e9",
     "best_public_model_name": "Treinamento do Modelo - XGBoost Otimizado"
   },

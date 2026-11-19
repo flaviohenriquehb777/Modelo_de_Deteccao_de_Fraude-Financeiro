@@ -14,7 +14,7 @@
 <img src="https://img.shields.io/badge/Python-3.12-blue.svg" alt="Python 3.12">
 <img src="https://img.shields.io/badge/uv-0.12.5-de5fe9" alt="uv">
 <img src="https://img.shields.io/badge/Depend%C3%AAncias-Fixadas%20(==)-success" alt="Dependências fixadas">
-<img src="https://img.shields.io/badge/Testes-33%20passando-brightgreen" alt="Testes">
+<img src="https://img.shields.io/badge/Testes-94%20passando-brightgreen" alt="Testes">
 <img src="https://img.shields.io/badge/SEED-42-informational" alt="SEED 42">
 <img src="https://img.shields.io/badge/XGBoost-3.3.0-success" alt="XGBoost">
 <img src="https://img.shields.io/badge/SHAP-0.52.0-purple" alt="SHAP">
@@ -54,7 +54,8 @@
 - **Determinismo:** `SEED = 42` aplicado na validação cruzada, no XGBoost e no SHAP. O preparo de dados é determinístico por construção.
 - **Gate de aceite automatizado:** o treino só é aprovado se atingir os critérios de negócio de precisão/recall (ver [Métricas do Modelo](#-métricas-do-modelo)).
 - **Higiene de versionamento:** `mlruns/` não é mais rastreado pelo Git; dados, modelo e artefatos SHAP são versionados exclusivamente pelo DVC.
-- **Suíte de testes:** 33 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
+- **Suíte de testes:** 94 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
+- **Qualidade estática:** o `ruff` roda **sem avisos** em `src`, `tests`, `conftest.py` e scripts, e é um **gate obrigatório da CI** (além dos testes e do gate de idempotência do DVC).
 
 ---
 
@@ -175,7 +176,7 @@ flowchart TD
 - **Versionamento com DVC:** dados, modelo e explicações SHAP são reconstruíveis via `dvc pull` / `dvc repro`; o [dvc.lock](dvc.lock) é a fonte de verdade dos hashes.
 - **Reprodutibilidade com versões fixas:** o ambiente é gerenciado pelo [uv](https://docs.astral.sh/uv/) — versões `==` no [pyproject.toml](pyproject.toml) e hashes no [uv.lock](uv.lock); a CI sincroniza com `uv sync --frozen` em Python 3.12.
 - **MLflow + DagsHub:** experimentos históricos, métricas e modelos registrados publicamente para auditoria técnica.
-- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala o ambiente com `uv sync --frozen`, valida as dependências (`uv pip check`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
+- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala o ambiente com `uv sync --frozen`, valida as dependências (`uv pip check`), roda o lint (`ruff check .`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
 - **Releases versionadas ([publish-release.yml](.github/workflows/publish-release.yml)):** separam explicitamente a entrega original das atualizações posteriores.
 - **Serviço de inferência:** interface CLI versionada em [src/serving/cli.py](src/serving/cli.py), com validação de contrato *fail-closed*.
 
@@ -201,7 +202,7 @@ Artefatos gerados por `generate_shap_insights` e consolidados por `generate_shap
 Modelo_de_Deteccao_de_Fraude-Financeiro/
 ├── .dvc/                                  # Configuração do DVC (config.local fora do Git)
 ├── .github/workflows/
-│   ├── ci-tests.yml                       # Testes + gate de idempotência do DVC
+│   ├── ci-tests.yml                       # Lint + testes + gate de idempotência do DVC
 │   └── publish-release.yml                # Publicação automática de releases
 ├── .dvcignore                             # Padrões ignorados pelo DVC
 ├── .gitignore                             # Padrões ignorados pelo Git
@@ -241,7 +242,7 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 │       ├── __init__.py
 │       ├── inference.py                   # Carga do bundle, validação e previsão
 │       └── cli.py                          # Interface oficial de inferência
-├── tests/                                 # 33 testes automatizados
+├── tests/                                 # 94 testes automatizados
 ├── LICENSE.md
 ├── README.md
 ├── conftest.py                            # Garante o projeto no sys.path nos testes
@@ -309,7 +310,8 @@ uv run dvc repro generate_shap_report    # relatório PDF
 ### Testes e verificação de reprodutibilidade
 
 ```bash
-uv run pytest -q                        # suíte completa (33 testes)
+uv run pytest -q                        # suíte completa (94 testes)
+uv run ruff check .                     # lint sem avisos (zero warnings)
 uv run dvc repro && uv run dvc status   # deve reportar "Data and pipelines are up to date."
 ```
 
@@ -374,13 +376,13 @@ Valores de `metrics.json` gerados pela última execução do pipeline:
 
 | Métrica | Valor |
 |:---:|:---:|
-| Threshold oficial | **0,500** |
-| Precisão (out-of-fold calibrada) | **92,64%** |
-| Recall (out-of-fold calibrado) | **81,91%** |
+| Threshold oficial | **0,566** |
+| Precisão (out-of-fold calibrada) | **96,11%** |
+| Recall (out-of-fold calibrado) | **80,28%** |
 | Acurácia | 99,96% |
-| Precisão média (CV 10-fold) | 92,63% |
-| Recall médio (CV 10-fold) | 82,00% |
-| *Business weighted gap* | 0,0164 |
+| Precisão média (CV 10-fold) | 96,25% |
+| Recall médio (CV 10-fold) | 80,28% |
+| *Business weighted gap* | 0,0050 |
 
 </div>
 
@@ -392,29 +394,45 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 
 | Critério | Limite | Resultado |
 |:---:|:---:|:---:|
-| `min_cv_precision` | ≥ 0,92 | ✅ |
-| `min_cv_recall` | ≥ 0,81 | ✅ |
-| `min_calibrated_precision` | ≥ 0,92 | ✅ |
-| `min_calibrated_recall` | ≥ 0,81 | ✅ |
-| `max_business_weighted_gap` | ≤ 0,02 | ✅ (0,0164) |
+| `min_cv_precision` | ≥ 0,94 | ✅ |
+| `min_cv_recall` | ≥ 0,78 | ✅ |
+| `min_calibrated_precision` | ≥ 0,96 | ✅ |
+| `min_calibrated_recall` | ≥ 0,80 | ✅ |
+| `max_business_weighted_gap` | ≤ 0,02 | ✅ (0,0050) |
 
 </div>
 
 **Status do gate: PASS** — `acceptance.passed = true`.
 
-### Baseline de negócio (referência histórica)
+### Meta aspiracional 96/82 (não bloqueante)
+
+A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recall > 80%). A meta **96/82 simultânea** é tratada como **aspiracional**: medida sobre a fronteira honesta out-of-fold, ela é **inalcançável** sem deteriorar a precisão (com `recall ≥ 0,82`, a precisão máxima observada é **0,9140**). Por isso ela **não** entra no gate — é apenas reportada em `metrics.json` (`aspirational_target`) e no scorecard, com o gap explícito.
+
+<div align="center">
+
+| Meta aspiracional | Valor |
+|:---:|:---:|
+| Alvo (`aspirational_precision` / `aspirational_recall`) | 0,96 / 0,82 |
+| Melhor ponto factível (`recall ≥ 0,82`) | P **0,9140** · R **0,8211** |
+| Gap de precisão (`0,96 − 0,9140`) | **0,0460** |
+| Simultaneamente alcançável? | ❌ (bloqueio aplicado apenas a 96/80) |
+
+</div>
+
+> **Por que não endurecer o gate para 96/82?** Seria um gate que **reprova sempre** (CI vermelha permanente). A escolha sênior é preservar o eixo de negócio crítico (precisão) e o recall mínimo, documentando o trade-off — **nunca** inflar métricas com vazamento de dados para forçar 96/82.
+
+### Baseline legado (referência histórica)
 
 <div align="center">
 
 | Métrica | Valor | Fonte |
 |:---:|:---:|:---:|
-| Precisão | 92,27% | melhor experimento histórico (MLflow/DagsHub) |
-| Recall | 81,02% | melhor experimento histórico (MLflow/DagsHub) |
-| Acurácia | 99,96% | melhor experimento histórico (MLflow/DagsHub) |
+| Precisão | 92,27% | baseline legado — `models/best_model_xgboost.reference.json` |
+| Recall | 81,02% | baseline legado — `models/best_model_xgboost.reference.json` |
 
 </div>
 
-> **Como ler as duas tabelas:** o *baseline histórico* é o alvo de negócio definido em `params.yaml` (`target_precision = 0.9227`, `target_recall = 0.8102`). O *pipeline operacional* é a versão automatizada que reproduz esse patamar de forma auditável, com desvio ponderado de apenas **0,0164** (1,64 p.p.) em relação ao alvo.
+> **Como ler as duas tabelas:** o *baseline legado* é o melhor XGBoost do projeto histórico, preservado em `models/best_model_xgboost.reference.json` (`business_baseline`: `precision = 0.9227`, `recall = 0.8102`). Ele é **distinto** do alvo de negócio da Fase 4 em `params.yaml` (`target_precision = 0.96`, `target_recall = 0.80`) e do run público auditável descrito em *MLflow e DagsHub Públicos*. O *pipeline operacional* é a versão automatizada que reproduz o patamar de forma auditável, com desvio ponderado de apenas **0,0050** (0,50 p.p.) em relação ao alvo de 0,96/0,80.
 
 ---
 
@@ -433,11 +451,13 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 
 ## 🌐 MLflow e DagsHub Públicos
 
-- **Experimento público principal:** `Fraud Detection XGBoost Experiment` (`experiment_id = 128518284461930217`)
+- **Experimento público principal:** `Fraud Detection XGBoost Experiment` (`experiment_id = 0`)
 - **Best-model histórico público:** `Treinamento do Modelo - XGBoost Otimizado` (`model_id = m-695031f059db422fb7c12c7e47ef58e9`)
-- **Métricas históricas auditáveis:** `precision = 0.922736`, `recall = 0.810171`, `accuracy = 0.999561`
+- **Métricas históricas auditáveis (run público):** `run_id = a26402d536734886aa1c26f42903f9e4` → `precision = 0.962025`, `recall = 0.775510`, `accuracy = 0.999561`
+- **Modelo operacional atual:** XGBoost `max_depth=7`, `n_estimators=300`, `learning_rate=0.1`, `random_state=42` (`scale_pos_weight` automático) — alinhado a [metrics.json](metrics.json)
 - **Execuções visíveis para avaliadores:** `7` runs públicos no DagsHub
 - **Registry público visível:** `1` modelo registrado publicamente no DagsHub
+- **Log de execução local (opt-in):** `uv run python src/config/train_model.py --mlflow` registra o modelo final, o threshold e os metadados no `mlruns/` local (fora do gate DVC/CI)
 
 ---
 
@@ -473,8 +493,8 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 
 ## 🎯 Interpretação das Métricas
 
-- **Alta Precisão (~92,6%)** → poucas transações legítimas são bloqueadas; reduz atrito com o cliente e custo de atendimento.
-- **Recall (~81,9%)** → captura a maior parte das fraudes, aceitando uma perda controlada em favor da experiência do cliente.
+- **Alta Precisão (~96,2%)** → poucas transações legítimas são bloqueadas; reduz atrito com o cliente e custo de atendimento.
+- **Recall (~80,3%)** → captura a maior parte das fraudes, aceitando uma perda controlada em favor da experiência do cliente.
 - **Acurácia (~99,96%)** → alta, porém pouco informativa isoladamente em datasets com 0,17% de positivos.
 - **Threshold calibrado por *business gap*** → o ponto de corte é escolhido minimizando um erro ponderado (precisão com peso 2×), não o padrão 0,5 por inércia.
 
@@ -487,6 +507,7 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 - [v1.1.0 — Rename + DagsHub/DVC/CI](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.1.0)
 - [v1.2.0 — Production Hardening Update](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.2.0)
 - [v1.3.0 — Reprodutibilidade e hardening](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.3.0)
+- [v1.4.0 — Governança, CI e release](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.4.0)
 
 > A entrega histórica segue explicitamente preservada pelas tags `snapshot` e `v1.0.0`; nenhum commit do histórico original foi reescrito.
 
@@ -498,6 +519,7 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 - **Fase 10 — Entrega Oficial do Update:** concluída (release v1.2.0)
 - **Fase 11 — Reprodutibilidade de Nível Sênior:** concluída (release v1.3.0) — versões fixadas, Python 3.12 na CI, gate de idempotência do DVC, `mlruns` fora do Git e README reconstruído
 - **Fase 12 — Ambiente de nível sênior com uv:** concluída — [pyproject.toml](pyproject.toml) (PEP 621) + [uv.lock](uv.lock) com hashes, Python 3.12 fixado em [.python-version](.python-version) e CI migrada para `uv sync --frozen`
+- **Fase 13 — Governança, CI e release:** concluída (release v1.4.0) — `ruff` sem avisos e como gate obrigatório na CI, notebooks higienizados (sem saídas/execução) e documentação revisada
 
 ---
 

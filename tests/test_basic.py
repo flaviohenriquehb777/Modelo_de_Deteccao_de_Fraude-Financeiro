@@ -1,26 +1,33 @@
+import importlib
+import sys
+
 import pytest
+
+# Dependencias de runtime cuja presenca no ambiente precisa ser garantida.
+DEPENDENCIAS = (
+    "dvc",
+    "joblib",
+    "mlflow",
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "shap",
+    "sklearn",
+    "xgboost",
+    "fpdf",
+)
+
 
 def test_imports():
     """Testa se todas as dependências podem ser importadas"""
     try:
-        import pandas
-        import numpy
-        import sklearn
-        import xgboost
-        import mlflow
-        import dvc
-        import joblib
-        import shap
-        import pyarrow
-        from fpdf import FPDF
-        print("✅ Todos os imports funcionaram!")
-        assert True
+        for modulo in DEPENDENCIAS:
+            importlib.import_module(modulo)
+        assert hasattr(importlib.import_module("fpdf"), "FPDF")
     except ImportError as e:
         pytest.fail(f"❌ Falha ao importar: {str(e)}")
 
+
 def test_python_version():
     """Testa se estamos usando Python 3.7+"""
-    import sys
-    version_valid = sys.version_info >= (3, 7)
-    print(f"✅ Python version: {sys.version}")
-    assert version_valid, "Python version must be 3.7 or higher"
+    assert sys.version_info >= (3, 7), "Python version must be 3.7 or higher"

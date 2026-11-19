@@ -34,23 +34,31 @@ def main() -> None:
         "repository": {
             "project_name": "Modelo_de_Deteccao_de_Fraude-Financeiro",
             "dvc_clone_zero_friction_branch": True,
-            "dagshub_public_repository": mlflow_public["dagshub"]["repository_visibility"] == "public",
+            "dagshub_public_repository": (
+                mlflow_public["dagshub"]["repository_visibility"] == "public"
+            ),
         },
         "model_readiness": {
             "acceptance_passed": acceptance["passed"],
-            "decision_threshold_versioned": 0.0 <= float(model_metadata["decision_threshold"]) <= 1.0,
+            "decision_threshold_versioned": (
+                0.0 <= float(model_metadata["decision_threshold"]) <= 1.0
+            ),
             "operational_model_present": PIPELINE_MODEL_PATH.exists(),
+            "validation_strategy": metrics["evaluation"].get("cv_strategy", "unknown"),
+            "operating_threshold": metrics["evaluation"].get("operating_threshold"),
             "calibrated_precision": selected_threshold["metrics"]["precision"],
             "calibrated_recall": selected_threshold["metrics"]["recall"],
             "alignment_score": selected_threshold["business_alignment"]["alignment_score"],
+            "business_target": metrics.get("business_target"),
+            "aspirational_target": metrics.get("aspirational_target"),
         },
         "data_readiness": {
             "quality_report_passed": data_quality["status"] == "passed",
             "processed_rows": data_quality["prepared_dataset"]["row_count"],
             "null_count": data_quality["prepared_dataset"]["null_count"],
-            "time_scaled_to_unit_interval": (
-                data_quality["prepared_dataset"]["time_min"] == 0.0
-                and data_quality["prepared_dataset"]["time_max"] == 1.0
+            "features_are_raw": data_quality["prepared_dataset"].get("features_are_raw", False),
+            "preprocessing_stage": data_quality["prepared_dataset"].get(
+                "preprocessing_stage", "unknown"
             ),
         },
         "public_evidence": {
@@ -61,7 +69,9 @@ def main() -> None:
         },
         "serving_readiness": {
             "cli_entrypoint": "python -m src.serving.cli",
-            "threshold_source": str(MODEL_METADATA_PATH.relative_to(PROJECT_ROOT)).replace("\\", "/"),
+            "threshold_source": str(MODEL_METADATA_PATH.relative_to(PROJECT_ROOT)).replace(
+                "\\", "/"
+            ),
             "inference_contract_module": "src/serving/inference.py",
         },
         "known_environment_notes": {

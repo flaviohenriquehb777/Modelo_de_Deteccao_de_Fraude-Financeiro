@@ -2,11 +2,15 @@
 # Parametros oficiais do pipeline DVC.
 # Convencao de determinismo: SEED = 42 em TODAS as etapas estocasticas
 # (validacao cruzada, XGBoost e explainability SHAP). O preparo de dados e
-# deterministico por natureza (MinMaxScaler + PowerTransformer Yeo-Johnson).
+# deterministico por natureza: engenharia de features temporais (row-wise),
+# MinMaxScaler em Time e PowerTransformer Yeo-Johnson em Amount. Toda a
+# transformacao e ajustada DENTRO do Pipeline, por fold (anti-leakage).
 # =============================================================================
 preprocess:
   time_scaler: minmax
   amount_transform: yeo-johnson
+  feature_engineering:
+    temporal_cyclic: true
 
 data_quality:
   minimum_rows: 1000
@@ -21,22 +25,52 @@ data_quality:
     - 1
 
 train:
+  # Calibracao de probabilidades (Fase 4): ajustada DENTRO do Pipeline, com
+  # validacao cruzada interna sobre o treino de cada dobra (anti-leakage).
+  calibration:
+    enabled: true
+    method: sigmoid
+    cv: 3
+    # ensemble=False: o estimador base e treinado em 100% do treino da dobra e o
+    # calibrador usa predicoes nao enviesadas (cross_val_predict). Com ensemble=True
+    # cada sub-modelo veria ~2/3 dos dados, degradando a fronteira Precision-Recall.
+    ensemble: false
   evaluation:
     cv_folds: 10
     shuffle: true
     random_state: 42
-    target_precision: 0.9227
-    target_recall: 0.8102
-    threshold_search_start: 0.5
-    threshold_search_end: 0.95
-    threshold_search_steps: 91
+    # Repeated stratified CV: a seed primaria (random_state) gera a avaliacao
+    # oficial; as demais seeds provam que o desempenho nao e artefato da particao.
+    robustness_seeds:
+      - 42
+      - 7
+      - 2024
+    # Meta de negocio (Fase 4): precision ~0,96 mantendo recall > 0,80.
+    target_precision: 0.96
+    target_recall: 0.80
+    # Meta ASPIRACIONAL (nao bloqueante) da Fase 7: 96/82 simultaneos. Medida
+    # como inalcancavel na fronteira honesta (recall >= 0,82 => precision max
+    # ~0,9140), logo NAO entra no gate; e reportada como referencia e gap em
+    # metrics.json (chave aspirational_target).
+    aspirational_precision: 0.96
+    aspirational_recall: 0.82
+    # Pisos de recall documentados na tabela de trade-off precision x recall.
+    trade_off_recall_floors:
+      - 0.80
+      - 0.82
+      - 0.85
+      - 0.90
     precision_weight: 2.0
     recall_weight: 1.0
   acceptance:
-    min_cv_precision: 0.92
-    min_cv_recall: 0.81
-    min_calibrated_precision: 0.92
-    min_calibrated_recall: 0.81
+    # Gate BLOQUEANTE (Fase 7): alvo de negocio literal 96/80 no ponto
+    # operacional calibrado (out-of-fold). A meta 96/82 e aspiracional e NAO
+    # bloqueia (ver evaluation.aspirational_precision/recall).
+    min_calibrated_precision: 0.96
+    min_calibrated_recall: 0.80
+    # Guard-rails de estabilidade da media entre dobras (margem sobre a meta).
+    min_cv_precision: 0.94
+    min_cv_recall: 0.78
     max_business_weighted_gap: 0.02
   xgboost:
     max_depth: 7
@@ -44,6 +78,45 @@ train:
     learning_rate: 0.1
     random_state: 42
     scale_pos_weight: auto
+  # Benchmark multi-modelo + busca restrita de hiperparametros (Fase 5).
+  # Roda como script standalone (src/config/benchmark_models.py), FORA do gate
+  # DVC/CI, para nao penalizar o tempo do pipeline de producao. Toda familia e
+  # avaliada com o MESMO protocolo honesto do modelo oficial: StratifiedKFold
+  # (evaluation.cv_folds) -> calibracao global OOF -> threshold restrito
+  # (maximizar precision sujeito a recall >= benchmark.recall_floor).
+  benchmark:
+    random_state: 42
+    recall_floor: 0.80
+    # Configuracoes-base de cada familia (sem tuning). `scale_pos_weight: auto`
+    # usa a razao de desbalanceamento observada; `class_weight: balanced` faz o
+    # papel equivalente nas familias que suportam peso por classe.
+    candidates:
+      xgboost:
+        max_depth: 7
+        n_estimators: 300
+        learning_rate: 0.1
+        scale_pos_weight: auto
+      lightgbm:
+        n_estimators: 300
+        learning_rate: 0.1
+        num_leaves: 63
+        scale_pos_weight: auto
+      random_forest:
+        n_estimators: 300
+        max_depth: 12
+        class_weight: balanced_subsample
+      logistic_regression:
+        max_iter: 1000
+        class_weight: balanced
+    # Busca restrita (RandomizedSearchCV com scorer que maximiza precision
+    # sujeito a recall >= recall_floor). Validacao ANINHADA: a busca roda dentro
+    # de cada dobra externa, e a metrica reportada e a do out-of-fold honesto.
+    tuning:
+      family: auto
+      n_iter: 10
+      inner_cv_folds: 3
+      outer_cv_folds: 5
+      n_jobs: 4
 
 explainability:
   sample_size: 2000

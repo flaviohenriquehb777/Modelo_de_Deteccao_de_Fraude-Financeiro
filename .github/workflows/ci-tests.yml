@@ -31,6 +31,10 @@ jobs:
     - name: Validate dependencies
       run: uv pip check
 
+    # Gate de qualidade: "zero warnings" (ruff) em src, tests, conftest e scripts.
+    - name: Lint (ruff)
+      run: uv run ruff check .
+
     - name: Configure DVC with DagsHub
       run: |
         uv run dvc remote modify --local dagshub url https://dagshub.com/${{ secrets.DAGSHUB_USER || github.repository_owner }}/${{ secrets.DAGSHUB_REPO_NAME || github.event.repository.name }}.dvc

@@ -28,6 +28,7 @@ dependencies = [
     # --- Machine Learning ---
     "scikit-learn==1.9.0",
     "xgboost==3.3.0",
+    "lightgbm==4.6.0",
     "imbalanced-learn==0.14.2",
     "joblib==1.5.3",
     # --- Visualizacao ---
@@ -72,6 +73,24 @@ environments = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# `notebooks/` guarda o historico experimental preservado como referencia
+# (Fase 9: sem re-execucao, apenas higiene). Nao e mantido como codigo-fonte,
+# portanto fica fora do lint/format.
+extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Estes scripts executaveis fazem bootstrap do diretorio raiz em `sys.path`
+# antes de importar os modulos `src.*`. O import precisa vir depois do
+# `sys.path.insert(...)`, portanto E402 (module-import-not-at-top-of-file)
+# e intencional nessas fronteiras.
+"src/config/benchmark_models.py" = ["E402"]
+"src/config/ensemble_experiment.py" = ["E402"]
+"src/config/generate_mlflow_public_summary.py" = ["E402"]
+"src/config/generate_production_readiness_scorecard.py" = ["E402"]
+"src/config/generate_shap_insights.py" = ["E402"]
+"src/config/generate_shap_report.py" = ["E402"]
+"src/config/prepare_data.py" = ["E402"]
+"src/config/train_model.py" = ["E402"]

@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 import yaml
-from sklearn.preprocessing import MinMaxScaler, PowerTransformer
 
 BOOTSTRAP_ROOT = Path(__file__).resolve().parents[2]
 if str(BOOTSTRAP_ROOT) not in sys.path:
@@ -21,7 +20,9 @@ def load_prepare_config() -> tuple[dict, dict]:
 
 
 def validate_input_dataset(df: pd.DataFrame, quality_config: dict) -> dict:
-    missing_columns = [column for column in quality_config["required_columns"] if column not in df.columns]
+    missing_columns = [
+        column for column in quality_config["required_columns"] if column not in df.columns
+    ]
     if missing_columns:
         raise ValueError(f"Colunas obrigatorias ausentes no dataset bruto: {missing_columns}")
 
@@ -32,7 +33,8 @@ def validate_input_dataset(df: pd.DataFrame, quality_config: dict) -> dict:
     row_count = len(df)
     if row_count < quality_config["minimum_rows"]:
         raise ValueError(
-            f"Dataset bruto possui {row_count} linhas, abaixo do minimo {quality_config['minimum_rows']}."
+            f"Dataset bruto possui {row_count} linhas, abaixo do minimo "
+            f"{quality_config['minimum_rows']}."
         )
 
     null_count = int(df.isnull().sum().sum())
@@ -58,21 +60,17 @@ def validate_input_dataset(df: pd.DataFrame, quality_config: dict) -> dict:
     }
 
 
-def apply_preprocessing(df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    prepared = df.copy()
+def validate_prepared_dataset(
+    df: pd.DataFrame, quality_config: dict, preprocess_config: dict
+) -> dict:
+    """Valida o dataset de saida.
 
-    if config.get("amount_transform") == "yeo-johnson":
-        amount_transformer = PowerTransformer(method="yeo-johnson")
-        prepared["Amount"] = amount_transformer.fit_transform(prepared[["Amount"]]).ravel()
-
-    if config.get("time_scaler") == "minmax":
-        time_scaler = MinMaxScaler()
-        prepared["Time"] = time_scaler.fit_transform(prepared[["Time"]]).ravel()
-
-    return prepared
-
-
-def validate_prepared_dataset(df: pd.DataFrame, quality_config: dict, preprocess_config: dict) -> dict:
+    Importante: as features sao mantidas BRUTAS neste estagio. A transformacao
+    (Yeo-Johnson em Amount e MinMaxScaler em Time) e aplicada DENTRO do Pipeline
+    de treino, ajustada apenas nos folds de treino, o que elimina o vazamento de
+    dados (data leakage) presente quando os transformadores eram ajustados sobre
+    o dataset inteiro.
+    """
     target_column = quality_config["target_column"]
     null_count = int(df.isnull().sum().sum())
     if null_count > 0 and not quality_config["allow_nulls"]:
@@ -80,15 +78,6 @@ def validate_prepared_dataset(df: pd.DataFrame, quality_config: dict, preprocess
 
     if not pd.api.types.is_numeric_dtype(df[target_column]):
         raise ValueError("Coluna alvo deve ser numerica apos o preparo.")
-
-    if preprocess_config.get("time_scaler") == "minmax":
-        time_min = float(df["Time"].min())
-        time_max = float(df["Time"].max())
-        if time_min < -1e-9 or time_max > 1.0 + 1e-9:
-            raise ValueError("Coluna Time deveria estar normalizada no intervalo [0, 1].")
-    else:
-        time_min = float(df["Time"].min())
-        time_max = float(df["Time"].max())
 
     if not pd.Series(df["Amount"]).map(pd.notna).all():
         raise ValueError("Coluna Amount contem valores invalidos apos o preparo.")
@@ -100,10 +89,13 @@ def validate_prepared_dataset(df: pd.DataFrame, quality_config: dict, preprocess
         "row_count": int(len(df)),
         "column_count": int(df.shape[1]),
         "null_count": int(null_count),
-        "time_min": time_min,
-        "time_max": time_max,
+        "time_min": float(df["Time"].min()),
+        "time_max": float(df["Time"].max()),
         "amount_mean": float(df["Amount"].mean()),
         "amount_std": float(df["Amount"].std()),
+        "features_are_raw": True,
+        "preprocessing_stage": "training_pipeline",
+        "preprocess_recipe": preprocess_config,
     }
 
 
@@ -135,16 +127,21 @@ def main(input_path: str, output_path: str) -> None:
     df = pd.read_csv(input_path, compression="infer")
 
     raw_metrics = validate_input_dataset(df, quality_config)
-    prepared = apply_preprocessing(df, preprocess_config)
+
+    # As features sao persistidas brutas; a transformacao acontece somente no
+    # Pipeline de treino (fit restrito aos folds de treino), evitando leakage.
+    prepared = df.copy()
     prepared_metrics = validate_prepared_dataset(prepared, quality_config, preprocess_config)
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     prepared.to_parquet(output_path, index=False)
 
-    report = build_quality_report(raw_metrics, prepared_metrics, preprocess_config, input_path, output_path)
+    report = build_quality_report(
+        raw_metrics, prepared_metrics, preprocess_config, input_path, output_path
+    )
     save_quality_report(report)
 
-    print(f"Dados preparados e salvos em {output_path}")
+    print(f"Dados preparados (features brutas) e salvos em {output_path}")
     print(f"Relatorio de qualidade salvo em {DATA_QUALITY_REPORT_PATH}")
 
 
