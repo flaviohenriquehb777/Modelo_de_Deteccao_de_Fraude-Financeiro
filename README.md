@@ -14,7 +14,7 @@
 <img src="https://img.shields.io/badge/Python-3.12-blue.svg" alt="Python 3.12">
 <img src="https://img.shields.io/badge/uv-0.12.5-de5fe9" alt="uv">
 <img src="https://img.shields.io/badge/Depend%C3%AAncias-Fixadas%20(==)-success" alt="Dependências fixadas">
-<img src="https://img.shields.io/badge/Testes-33%20passando-brightgreen" alt="Testes">
+<img src="https://img.shields.io/badge/Testes-52%20passando-brightgreen" alt="Testes">
 <img src="https://img.shields.io/badge/SEED-42-informational" alt="SEED 42">
 <img src="https://img.shields.io/badge/XGBoost-3.3.0-success" alt="XGBoost">
 <img src="https://img.shields.io/badge/SHAP-0.52.0-purple" alt="SHAP">
@@ -54,7 +54,7 @@
 - **Determinismo:** `SEED = 42` aplicado na validação cruzada, no XGBoost e no SHAP. O preparo de dados é determinístico por construção.
 - **Gate de aceite automatizado:** o treino só é aprovado se atingir os critérios de negócio de precisão/recall (ver [Métricas do Modelo](#-métricas-do-modelo)).
 - **Higiene de versionamento:** `mlruns/` não é mais rastreado pelo Git; dados, modelo e artefatos SHAP são versionados exclusivamente pelo DVC.
-- **Suíte de testes:** 33 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
+- **Suíte de testes:** 52 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
 
 ---
 
@@ -241,7 +241,7 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 │       ├── __init__.py
 │       ├── inference.py                   # Carga do bundle, validação e previsão
 │       └── cli.py                          # Interface oficial de inferência
-├── tests/                                 # 33 testes automatizados
+├── tests/                                 # 52 testes automatizados
 ├── LICENSE.md
 ├── README.md
 ├── conftest.py                            # Garante o projeto no sys.path nos testes
@@ -309,7 +309,7 @@ uv run dvc repro generate_shap_report    # relatório PDF
 ### Testes e verificação de reprodutibilidade
 
 ```bash
-uv run pytest -q                        # suíte completa (33 testes)
+uv run pytest -q                        # suíte completa (52 testes)
 uv run dvc repro && uv run dvc status   # deve reportar "Data and pipelines are up to date."
 ```
 
@@ -374,13 +374,13 @@ Valores de `metrics.json` gerados pela última execução do pipeline:
 
 | Métrica | Valor |
 |:---:|:---:|
-| Threshold oficial | **0,500** |
-| Precisão (out-of-fold calibrada) | **92,64%** |
-| Recall (out-of-fold calibrado) | **81,91%** |
+| Threshold oficial | **0,566** |
+| Precisão (out-of-fold calibrada) | **96,11%** |
+| Recall (out-of-fold calibrado) | **80,28%** |
 | Acurácia | 99,96% |
-| Precisão média (CV 10-fold) | 92,63% |
-| Recall médio (CV 10-fold) | 82,00% |
-| *Business weighted gap* | 0,0164 |
+| Precisão média (CV 10-fold) | 96,25% |
+| Recall médio (CV 10-fold) | 80,28% |
+| *Business weighted gap* | 0,0050 |
 
 </div>
 
@@ -392,29 +392,28 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 
 | Critério | Limite | Resultado |
 |:---:|:---:|:---:|
-| `min_cv_precision` | ≥ 0,92 | ✅ |
-| `min_cv_recall` | ≥ 0,81 | ✅ |
-| `min_calibrated_precision` | ≥ 0,92 | ✅ |
-| `min_calibrated_recall` | ≥ 0,81 | ✅ |
-| `max_business_weighted_gap` | ≤ 0,02 | ✅ (0,0164) |
+| `min_cv_precision` | ≥ 0,94 | ✅ |
+| `min_cv_recall` | ≥ 0,78 | ✅ |
+| `min_calibrated_precision` | ≥ 0,96 | ✅ |
+| `min_calibrated_recall` | ≥ 0,80 | ✅ |
+| `max_business_weighted_gap` | ≤ 0,02 | ✅ (0,0050) |
 
 </div>
 
 **Status do gate: PASS** — `acceptance.passed = true`.
 
-### Baseline de negócio (referência histórica)
+### Baseline legado (referência histórica)
 
 <div align="center">
 
 | Métrica | Valor | Fonte |
 |:---:|:---:|:---:|
-| Precisão | 92,27% | melhor experimento histórico (MLflow/DagsHub) |
-| Recall | 81,02% | melhor experimento histórico (MLflow/DagsHub) |
-| Acurácia | 99,96% | melhor experimento histórico (MLflow/DagsHub) |
+| Precisão | 92,27% | baseline legado — `models/best_model_xgboost.reference.json` |
+| Recall | 81,02% | baseline legado — `models/best_model_xgboost.reference.json` |
 
 </div>
 
-> **Como ler as duas tabelas:** o *baseline histórico* é o alvo de negócio definido em `params.yaml` (`target_precision = 0.9227`, `target_recall = 0.8102`). O *pipeline operacional* é a versão automatizada que reproduz esse patamar de forma auditável, com desvio ponderado de apenas **0,0164** (1,64 p.p.) em relação ao alvo.
+> **Como ler as duas tabelas:** o *baseline legado* é o melhor XGBoost do projeto histórico, preservado em `models/best_model_xgboost.reference.json` (`business_baseline`: `precision = 0.9227`, `recall = 0.8102`). Ele é **distinto** do alvo de negócio da Fase 4 em `params.yaml` (`target_precision = 0.96`, `target_recall = 0.80`) e do run público auditável descrito em *MLflow e DagsHub Públicos*. O *pipeline operacional* é a versão automatizada que reproduz o patamar de forma auditável, com desvio ponderado de apenas **0,0050** (0,50 p.p.) em relação ao alvo de 0,96/0,80.
 
 ---
 
@@ -433,11 +432,13 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 
 ## 🌐 MLflow e DagsHub Públicos
 
-- **Experimento público principal:** `Fraud Detection XGBoost Experiment` (`experiment_id = 128518284461930217`)
+- **Experimento público principal:** `Fraud Detection XGBoost Experiment` (`experiment_id = 0`)
 - **Best-model histórico público:** `Treinamento do Modelo - XGBoost Otimizado` (`model_id = m-695031f059db422fb7c12c7e47ef58e9`)
-- **Métricas históricas auditáveis:** `precision = 0.922736`, `recall = 0.810171`, `accuracy = 0.999561`
+- **Métricas históricas auditáveis (run público):** `run_id = a26402d536734886aa1c26f42903f9e4` → `precision = 0.962025`, `recall = 0.775510`, `accuracy = 0.999561`
+- **Modelo operacional atual:** XGBoost `max_depth=7`, `n_estimators=300`, `learning_rate=0.1`, `random_state=42` (`scale_pos_weight` automático) — alinhado a [metrics.json](metrics.json)
 - **Execuções visíveis para avaliadores:** `7` runs públicos no DagsHub
 - **Registry público visível:** `1` modelo registrado publicamente no DagsHub
+- **Log de execução local (opt-in):** `uv run python src/config/train_model.py --mlflow` registra o modelo final, o threshold e os metadados no `mlruns/` local (fora do gate DVC/CI)
 
 ---
 
@@ -473,8 +474,8 @@ O treino só é considerado aprovado se **todos** os critérios forem satisfeito
 
 ## 🎯 Interpretação das Métricas
 
-- **Alta Precisão (~92,6%)** → poucas transações legítimas são bloqueadas; reduz atrito com o cliente e custo de atendimento.
-- **Recall (~81,9%)** → captura a maior parte das fraudes, aceitando uma perda controlada em favor da experiência do cliente.
+- **Alta Precisão (~96,2%)** → poucas transações legítimas são bloqueadas; reduz atrito com o cliente e custo de atendimento.
+- **Recall (~80,3%)** → captura a maior parte das fraudes, aceitando uma perda controlada em favor da experiência do cliente.
 - **Acurácia (~99,96%)** → alta, porém pouco informativa isoladamente em datasets com 0,17% de positivos.
 - **Threshold calibrado por *business gap*** → o ponto de corte é escolhido minimizando um erro ponderado (precisão com peso 2×), não o padrão 0,5 por inércia.
 

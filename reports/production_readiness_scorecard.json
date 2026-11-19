@@ -9,10 +9,10 @@
     "decision_threshold_versioned": true,
     "operational_model_present": true,
     "validation_strategy": "StratifiedKFold",
-    "operating_threshold": 0.565,
-    "calibrated_precision": 0.9237875288683602,
-    "calibrated_recall": 0.8130081300813008,
-    "alignment_score": 0.9950168121819787
+    "operating_threshold": 0.5660155840419437,
+    "calibrated_precision": 0.9610705596107056,
+    "calibrated_recall": 0.8028455284552846,
+    "alignment_score": 0.9950133523233041
   },
   "data_readiness": {
     "quality_report_passed": true,
@@ -23,7 +23,7 @@
   },
   "public_evidence": {
     "public_experiments": 7,
-    "public_models": 3,
+    "public_models": 1,
     "best_public_model_id": "m-695031f059db422fb7c12c7e47ef58e9",
     "best_public_model_name": "Treinamento do Modelo - XGBoost Otimizado"
   },

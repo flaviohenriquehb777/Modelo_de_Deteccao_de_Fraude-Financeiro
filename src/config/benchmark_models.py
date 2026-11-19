@@ -22,6 +22,7 @@ gerar evidencia e nao penaliza o tempo da CI. A evidencia versionada e
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -550,6 +551,9 @@ def log_to_mlflow(report: dict) -> None:
         print("[mlflow] mlflow indisponivel; registro ignorado.")
         return
 
+    # O MLflow 3.x coloca o backend de filesystem ('./mlruns') em manutencao e
+    # passa a exigir esta flag para continuar usando o file store local.
+    os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
     mlflow.set_tracking_uri((PROJECT_ROOT / "mlruns").as_uri())
     mlflow.set_experiment("benchmark_fase5")
     for entry in report["benchmark"]["families"]:

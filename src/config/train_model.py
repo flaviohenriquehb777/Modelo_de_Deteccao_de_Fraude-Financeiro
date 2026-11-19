@@ -1,4 +1,6 @@
+import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -44,6 +46,7 @@ from src.config.paths import (
 
 DEFAULT_THRESHOLD = 0.5
 FOLD_METRIC_ORDER = ("accuracy", "precision", "recall", "f1", "roc_auc", "pr_auc")
+MLFLOW_EXPERIMENT_NAME = "fraud_detection_official"
 
 
 def relative_posix_path(path: Path) -> str:
@@ -866,7 +869,100 @@ def save_model_metadata(metrics: dict, calibration_config: dict | None = None) -
         json.dump(metadata, file, indent=2)
 
 
+def log_final_model_to_mlflow(
+    metrics: dict,
+    evaluation_config: dict,
+    model_config: dict,
+    calibration_config: dict | None,
+    acceptance: dict,
+) -> None:
+    """Registra o modelo final (treinado em 100% dos dados) no MLflow local.
+
+    Fora do gate DVC/CI: so executa com a flag `--mlflow`. O tracking aponta
+    para o `mlruns/` local (git-ignored); o artefato versionado oficialmente
+    continua sendo o `models/model.pkl` gerido pelo DVC. Nunca derruba o treino:
+    se o mlflow estiver indisponivel, o registro e apenas ignorado.
+    """
+    try:
+        import mlflow
+    except ImportError:
+        print("[mlflow] mlflow indisponivel; registro ignorado.")
+        return
+
+    # O MLflow 3.x coloca o backend de filesystem ('./mlruns') em manutencao e
+    # passa a exigir esta flag para continuar usando o file store local.
+    os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+    mlflow.set_tracking_uri((PROJECT_ROOT / "mlruns").as_uri())
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+
+    threshold_calibration = metrics["threshold_calibration"]
+    selected = threshold_calibration["selected"]
+    selected_metrics = selected["metrics"]
+    business_alignment = selected["business_alignment"]
+    cv_mean = metrics["cross_validation_mean_metrics"]
+    oof_probability = metrics["out_of_fold_probability_metrics"]
+    calibration = calibration_config or {"enabled": False}
+
+    with mlflow.start_run(run_name="final_model_xgboost"):
+        mlflow.log_params(
+            {
+                "model_type": "XGBClassifier",
+                "max_depth": model_config["max_depth"],
+                "n_estimators": model_config["n_estimators"],
+                "learning_rate": model_config["learning_rate"],
+                "random_state": model_config["random_state"],
+                "scale_pos_weight": model_config["scale_pos_weight"],
+                "calibration_enabled": bool(calibration.get("enabled", False)),
+                "calibration_method": str(calibration.get("method", "none")),
+                "calibration_cv": int(calibration.get("cv", 0)),
+                "calibration_ensemble": bool(calibration.get("ensemble", False)),
+                "cv_strategy": metrics["cv_strategy"],
+                "cv_folds": int(evaluation_config["cv_folds"]),
+                "threshold_rule": threshold_calibration["selection_rule"],
+            }
+        )
+        mlflow.log_metrics(
+            {
+                "operating_threshold": float(metrics["operating_threshold"]),
+                "calibrated_precision": float(selected_metrics["precision"]),
+                "calibrated_recall": float(selected_metrics["recall"]),
+                "calibrated_f1": float(selected_metrics["f1"]),
+                "cv_precision": float(cv_mean["precision"]),
+                "cv_recall": float(cv_mean["recall"]),
+                "pr_auc": float(oof_probability["pr_auc"]),
+                "roc_auc": float(oof_probability["roc_auc"]),
+                "business_weighted_gap": float(business_alignment["weighted_gap"]),
+                "alignment_score": float(business_alignment["alignment_score"]),
+                "acceptance_passed": 1.0 if acceptance["passed"] else 0.0,
+            }
+        )
+        for artifact in (
+            PIPELINE_MODEL_PATH,
+            MODEL_METADATA_PATH,
+            EVALUATION_REPORT_PATH,
+            EVALUATION_REPORT_MD_PATH,
+            PROJECT_ROOT / "metrics.json",
+        ):
+            if artifact.exists():
+                mlflow.log_artifact(str(artifact))
+
+    print(f"[mlflow] modelo final registrado no experimento '{MLFLOW_EXPERIMENT_NAME}'.")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Treino e validacao do modelo de fraude (Credicard)."
+    )
+    parser.add_argument(
+        "--mlflow",
+        action="store_true",
+        help="Registra o modelo final no MLflow local (mlruns/, git-ignored). Fora do gate DVC/CI.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     df = pd.read_parquet(PROCESSED_DATA_PATH)
     X = df.drop("Class", axis=1)
     y = df["Class"]
@@ -916,6 +1012,11 @@ def main() -> None:
     acceptance = evaluate_model_acceptance(metrics, acceptance_config)
     if not acceptance["passed"]:
         raise RuntimeError(f"Modelo reprovado nos criterios de aceite: {acceptance['checks']}")
+
+    if args.mlflow:
+        log_final_model_to_mlflow(
+            metrics, evaluation_config, model_config, calibration_config, acceptance
+        )
 
     print(
         "Modelo treinado com validacao cruzada estratificada (Pipeline anti-leakage). "

@@ -1,4 +1,5 @@
 import json
+import random
 import sys
 import warnings
 from pathlib import Path
@@ -123,8 +124,21 @@ class FraudSHAPExplainer:
             return getattr(calibrated, "base_estimator", calibrated)
         return estimator
 
+    def _seed_randomness(self) -> None:
+        """Fixa as sementes dos geradores usados internamente pelo SHAP.
+
+        Os plots beeswarm (`summary_plot`), de dependencia e o `force_plot` usam
+        `np.random` e `random` (jitter, embaralhamento e ids do HTML). Sem fixar
+        as sementes os PNGs/HTML mudam a cada execucao, quebrando a idempotencia
+        do pipeline DVC. Usamos o `random_state` da configuracao de explainability.
+        """
+        random_state = self.explainability_config["random_state"]
+        np.random.seed(random_state)
+        random.seed(random_state)
+
     def generate_shap_analysis(self) -> None:
         print("Gerando analise SHAP...")
+        self._seed_randomness()
 
         self.explainer = shap.TreeExplainer(self.classifier)
         shap_values = self.explainer.shap_values(self.X)
