@@ -1,0 +1,479 @@
+{
+  "generated_by": "src/config/ensemble_experiment.py",
+  "protocol": {
+    "cv_strategy": "StratifiedKFold",
+    "cv_folds": 10,
+    "random_state": 42,
+    "selection_rule": "maximize_precision_subject_to_recall",
+    "calibration": {
+      "enabled": true,
+      "method": "sigmoid",
+      "cv": 3,
+      "ensemble": false
+    },
+    "aspirational": {
+      "precision": 0.96,
+      "recall": 0.82,
+      "blocking": false
+    },
+    "dataset": {
+      "processed_data_path": "dados/credicard_tratado.parquet",
+      "row_count": 284807,
+      "feature_count": 30,
+      "positive_count": 492,
+      "positive_rate": 0.001727485630620034
+    }
+  },
+  "strategies": [
+    {
+      "name": "xgboost",
+      "type": "single",
+      "operating_threshold": 0.5660155840419437,
+      "cross_validation_mean_metrics": {
+        "accuracy": 0.9996032395833374,
+        "precision": 0.9624646671158299,
+        "recall": 0.8027755102040816,
+        "f1": 0.8747518701215284,
+        "roc_auc": 0.9807851525171655,
+        "pr_auc": 0.8586195763426714
+      },
+      "out_of_fold_operating_threshold_metrics": {
+        "accuracy": 0.9996032400889023,
+        "precision": 0.9610705596107056,
+        "recall": 0.8028455284552846,
+        "f1": 0.8748615725359912
+      },
+      "out_of_fold_probability_metrics": {
+        "roc_auc": 0.9804103294053358,
+        "pr_auc": 0.8573293659082218
+      },
+      "threshold_trade_off": [
+        {
+          "recall_floor": 0.8,
+          "threshold": 0.5660155840419437,
+          "precision": 0.9610705596107056,
+          "recall": 0.8028455284552846
+        },
+        {
+          "recall_floor": 0.82,
+          "threshold": 0.18589901981463133,
+          "precision": 0.9140271493212669,
+          "recall": 0.8211382113821138
+        },
+        {
+          "recall_floor": 0.85,
+          "threshold": 0.02645943935541123,
+          "precision": 0.6960132890365448,
+          "recall": 0.8516260162601627
+        },
+        {
+          "recall_floor": 0.9,
+          "threshold": 0.0029459300802976906,
+          "precision": 0.15467877094972068,
+          "recall": 0.9004065040650406
+        }
+      ],
+      "aspirational_target": {
+        "target_precision": 0.96,
+        "target_recall": 0.82,
+        "blocking": false,
+        "best_feasible": {
+          "threshold": 0.18589901981463133,
+          "precision": 0.9140271493212669,
+          "recall": 0.8211382113821138
+        },
+        "precision_gap": 0.045972850678733024,
+        "simultaneously_achievable": false
+      }
+    },
+    {
+      "name": "lightgbm",
+      "type": "single",
+      "operating_threshold": 0.648132722502677,
+      "cross_validation_mean_metrics": {
+        "accuracy": 0.9996207953932622,
+        "precision": 0.9643706739411936,
+        "recall": 0.8108979591836734,
+        "f1": 0.8802340125315606,
+        "roc_auc": 0.9785417076026024,
+        "pr_auc": 0.8608200704491221
+      },
+      "out_of_fold_operating_threshold_metrics": {
+        "accuracy": 0.999620795837181,
+        "precision": 0.9637681159420289,
+        "recall": 0.8109756097560976,
+        "f1": 0.8807947019867549
+      },
+      "out_of_fold_probability_metrics": {
+        "roc_auc": 0.9785400840045014,
+        "pr_auc": 0.8596096511482573
+      },
+      "threshold_trade_off": [
+        {
+          "recall_floor": 0.8,
+          "threshold": 0.648132722502677,
+          "precision": 0.9637681159420289,
+          "recall": 0.8109756097560976
+        },
+        {
+          "recall_floor": 0.82,
+          "threshold": 0.28699103095998674,
+          "precision": 0.9351851851851852,
+          "recall": 0.8211382113821138
+        },
+        {
+          "recall_floor": 0.85,
+          "threshold": 0.03841775180772244,
+          "precision": 0.8215686274509804,
+          "recall": 0.8516260162601627
+        },
+        {
+          "recall_floor": 0.9,
+          "threshold": 0.0014203504596462975,
+          "precision": 0.09921612541993281,
+          "recall": 0.9004065040650406
+        }
+      ],
+      "aspirational_target": {
+        "target_precision": 0.96,
+        "target_recall": 0.82,
+        "blocking": false,
+        "best_feasible": {
+          "threshold": 0.28699103095998674,
+          "precision": 0.9351851851851852,
+          "recall": 0.8211382113821138
+        },
+        "precision_gap": 0.024814814814814734,
+        "simultaneously_achievable": false
+      }
+    },
+    {
+      "name": "random_forest",
+      "type": "single",
+      "operating_threshold": 0.21103833200922284,
+      "cross_validation_mean_metrics": {
+        "accuracy": 0.999473327304937,
+        "precision": 0.8813079305449458,
+        "recall": 0.8048163265306123,
+        "f1": 0.8407012078173229,
+        "roc_auc": 0.98124620873974,
+        "pr_auc": 0.836710363509771
+      },
+      "out_of_fold_operating_threshold_metrics": {
+        "accuracy": 0.9994733275516402,
+        "precision": 0.88,
+        "recall": 0.8048780487804879,
+        "f1": 0.8407643312101911
+      },
+      "out_of_fold_probability_metrics": {
+        "roc_auc": 0.9801027473106448,
+        "pr_auc": 0.8351086087114955
+      },
+      "threshold_trade_off": [
+        {
+          "recall_floor": 0.8,
+          "threshold": 0.21103833200922284,
+          "precision": 0.88,
+          "recall": 0.8048780487804879
+        },
+        {
+          "recall_floor": 0.82,
+          "threshold": 0.15467119059930468,
+          "precision": 0.8614072494669509,
+          "recall": 0.8211382113821138
+        },
+        {
+          "recall_floor": 0.85,
+          "threshold": 0.060120274085751484,
+          "precision": 0.7402826855123675,
+          "recall": 0.8516260162601627
+        },
+        {
+          "recall_floor": 0.9,
+          "threshold": 0.0027300912917079304,
+          "precision": 0.07814429352619509,
+          "recall": 0.9004065040650406
+        }
+      ],
+      "aspirational_target": {
+        "target_precision": 0.96,
+        "target_recall": 0.82,
+        "blocking": false,
+        "best_feasible": {
+          "threshold": 0.15467119059930468,
+          "precision": 0.8614072494669509,
+          "recall": 0.8211382113821138
+        },
+        "precision_gap": 0.09859275053304906,
+        "simultaneously_achievable": false
+      }
+    },
+    {
+      "name": "logistic_regression",
+      "type": "single",
+      "operating_threshold": 0.06035222724409351,
+      "cross_validation_mean_metrics": {
+        "accuracy": 0.9993609702200441,
+        "precision": 0.8267126316553652,
+        "recall": 0.8007755102040817,
+        "f1": 0.8126174682554883,
+        "roc_auc": 0.9793337636614255,
+        "pr_auc": 0.7402857221471707
+      },
+      "out_of_fold_operating_threshold_metrics": {
+        "accuracy": 0.9993609707626568,
+        "precision": 0.8242677824267782,
+        "recall": 0.8008130081300813,
+        "f1": 0.8123711340206186
+      },
+      "out_of_fold_probability_metrics": {
+        "roc_auc": 0.9789252881229724,
+        "pr_auc": 0.7376096267660863
+      },
+      "threshold_trade_off": [
+        {
+          "recall_floor": 0.8,
+          "threshold": 0.06035222724409351,
+          "precision": 0.8242677824267782,
+          "recall": 0.8008130081300813
+        },
+        {
+          "recall_floor": 0.82,
+          "threshold": 0.008473796873468954,
+          "precision": 0.6495176848874598,
+          "recall": 0.8211382113821138
+        },
+        {
+          "recall_floor": 0.85,
+          "threshold": 0.004119532261770374,
+          "precision": 0.38832252085264135,
+          "recall": 0.8516260162601627
+        },
+        {
+          "recall_floor": 0.9,
+          "threshold": 0.0013710333552742445,
+          "precision": 0.08203703703703703,
+          "recall": 0.9004065040650406
+        }
+      ],
+      "aspirational_target": {
+        "target_precision": 0.96,
+        "target_recall": 0.82,
+        "blocking": false,
+        "best_feasible": {
+          "threshold": 0.008473796873468954,
+          "precision": 0.6495176848874598,
+          "recall": 0.8211382113821138
+        },
+        "precision_gap": 0.3104823151125402,
+        "simultaneously_achievable": false
+      }
+    },
+    {
+      "name": "blend_mean",
+      "type": "ensemble",
+      "operating_threshold": 0.4719609481763482,
+      "cross_validation_mean_metrics": {
+        "accuracy": 0.9995751504353976,
+        "precision": 0.9457925601530253,
+        "recall": 0.8007755102040817,
+        "f1": 0.8666665207710004,
+        "roc_auc": 0.9833194462911387,
+        "pr_auc": 0.859278439170365
+      },
+      "out_of_fold_operating_threshold_metrics": {
+        "accuracy": 0.9995751508916565,
+        "precision": 0.9448441247002398,
+        "recall": 0.8008130081300813,
+        "f1": 0.8668866886688669
+      },
+      "out_of_fold_probability_metrics": {
+        "roc_auc": 0.9828195395894483,
+        "pr_auc": 0.8565511548377377
+      },
+      "threshold_trade_off": [
+        {
+          "recall_floor": 0.8,
+          "threshold": 0.4719609481763482,
+          "precision": 0.9448441247002398,
+          "recall": 0.8008130081300813
+        },
+        {
+          "recall_floor": 0.82,
+          "threshold": 0.2517575734580767,
+          "precision": 0.8728448275862069,
+          "recall": 0.823170731707317
+        },
+        {
+          "recall_floor": 0.85,
+          "threshold": 0.05729257680193047,
+          "precision": 0.7920604914933838,
+          "recall": 0.8516260162601627
+        },
+        {
+          "recall_floor": 0.9,
+          "threshold": 0.0028758064606386824,
+          "precision": 0.1494097807757167,
+          "recall": 0.9004065040650406
+        }
+      ],
+      "aspirational_target": {
+        "target_precision": 0.96,
+        "target_recall": 0.82,
+        "blocking": false,
+        "best_feasible": {
+          "threshold": 0.2517575734580767,
+          "precision": 0.8728448275862069,
+          "recall": 0.823170731707317
+        },
+        "precision_gap": 0.08715517241379311,
+        "simultaneously_achievable": false
+      }
+    },
+    {
+      "name": "stacking_logreg",
+      "type": "stacking",
+      "operating_threshold": 0.5454580276860435,
+      "cross_validation_mean_metrics": {
+        "accuracy": 0.9995997283473825,
+        "precision": 0.961207328311696,
+        "recall": 0.800734693877551,
+        "f1": 0.8732791851266948,
+        "roc_auc": 0.9823263865274905,
+        "pr_auc": 0.8637008767789597
+      },
+      "out_of_fold_operating_threshold_metrics": {
+        "accuracy": 0.9995997289392465,
+        "precision": 0.9609756097560975,
+        "recall": 0.8008130081300813,
+        "f1": 0.8736141906873615
+      },
+      "out_of_fold_probability_metrics": {
+        "roc_auc": 0.981363679841536,
+        "pr_auc": 0.8625092666940194
+      },
+      "threshold_trade_off": [
+        {
+          "recall_floor": 0.8,
+          "threshold": 0.5454580276860435,
+          "precision": 0.9609756097560975,
+          "recall": 0.8008130081300813
+        },
+        {
+          "recall_floor": 0.82,
+          "threshold": 0.22166657100975873,
+          "precision": 0.9287356321839081,
+          "recall": 0.8211382113821138
+        },
+        {
+          "recall_floor": 0.85,
+          "threshold": 0.05288981491550256,
+          "precision": 0.8363273453093812,
+          "recall": 0.8516260162601627
+        },
+        {
+          "recall_floor": 0.9,
+          "threshold": 0.002619026087596703,
+          "precision": 0.16882621951219512,
+          "recall": 0.9004065040650406
+        }
+      ],
+      "aspirational_target": {
+        "target_precision": 0.96,
+        "target_recall": 0.82,
+        "blocking": false,
+        "best_feasible": {
+          "threshold": 0.22166657100975873,
+          "precision": 0.9287356321839081,
+          "recall": 0.8211382113821138
+        },
+        "precision_gap": 0.031264367816091876,
+        "simultaneously_achievable": false
+      }
+    },
+    {
+      "name": "stacking_logreg_balanced",
+      "type": "stacking",
+      "operating_threshold": 0.43098359837955513,
+      "cross_validation_mean_metrics": {
+        "accuracy": 0.9995295052309661,
+        "precision": 0.9156522711368174,
+        "recall": 0.8028571428571428,
+        "f1": 0.8547428489387837,
+        "roc_auc": 0.9831205068860672,
+        "pr_auc": 0.8601622093212071
+      },
+      "out_of_fold_operating_threshold_metrics": {
+        "accuracy": 0.999529505946132,
+        "precision": 0.9143518518518519,
+        "recall": 0.8028455284552846,
+        "f1": 0.854978354978355
+      },
+      "out_of_fold_probability_metrics": {
+        "roc_auc": 0.9819291024540655,
+        "pr_auc": 0.8579779505056258
+      },
+      "threshold_trade_off": [
+        {
+          "recall_floor": 0.8,
+          "threshold": 0.43098359837955513,
+          "precision": 0.9143518518518519,
+          "recall": 0.8028455284552846
+        },
+        {
+          "recall_floor": 0.82,
+          "threshold": 0.1698146192566752,
+          "precision": 0.8728448275862069,
+          "recall": 0.823170731707317
+        },
+        {
+          "recall_floor": 0.85,
+          "threshold": 0.03887014012351284,
+          "precision": 0.8057692307692308,
+          "recall": 0.8516260162601627
+        },
+        {
+          "recall_floor": 0.9,
+          "threshold": 0.0022961583766343235,
+          "precision": 0.1574271499644634,
+          "recall": 0.9004065040650406
+        }
+      ],
+      "aspirational_target": {
+        "target_precision": 0.96,
+        "target_recall": 0.82,
+        "blocking": false,
+        "best_feasible": {
+          "threshold": 0.1698146192566752,
+          "precision": 0.8728448275862069,
+          "recall": 0.823170731707317
+        },
+        "precision_gap": 0.08715517241379311,
+        "simultaneously_achievable": false
+      }
+    }
+  ],
+  "verdict": {
+    "best_single": {
+      "name": "lightgbm",
+      "pr_auc": 0.8596096511482573,
+      "precision_at_aspirational_recall": 0.9351851851851852
+    },
+    "best_ensemble": {
+      "name": "stacking_logreg",
+      "pr_auc": 0.8625092666940194,
+      "precision_at_aspirational_recall": 0.9287356321839081
+    },
+    "best_strategy_overall": "stacking_logreg",
+    "ensemble_delta_pr_auc_vs_best_single": 0.002899615545762124,
+    "ensemble_moves_frontier": false,
+    "simultaneously_achievable": false,
+    "best_feasible_precision_at_aspirational_recall": 0.9351851851851852,
+    "gap_to_aspirational_precision": 0.024814814814814734,
+    "conclusion": "Nenhuma estrategia (modelo unico, blend ou stacking) atinge 96/82 simultaneamente na fronteira honesta. A meta aspiracional permanece NAO bloqueante: mantem-se o alvo de negocio 96/80, com o gap documentado explicitamente."
+  },
+  "notes": [
+    "Features adicionais foram sondadas na Fase 2 (temporais ciclicas: ganho dentro de 1 desvio-padrao) e descartadas como lever.",
+    "A meta 96/82 simultanea foi confirmada inalcancavel tambem por ensemble/stacking; nao ha vazamento de dados em nenhuma metrica."
+  ]
+}
