@@ -22,8 +22,13 @@ stages:
     outs:
     - models/model.pkl
     - models/model_metadata.json
+    - reports/evaluation_plots
     metrics:
     - metrics.json:
+        cache: false
+    - reports/evaluation_report.json:
+        cache: false
+    - reports/evaluation_report.md:
         cache: false
 
   generate_shap_insights:

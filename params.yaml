@@ -29,6 +29,12 @@ train:
     cv_folds: 10
     shuffle: true
     random_state: 42
+    # Repeated stratified CV: a seed primaria (random_state) gera a avaliacao
+    # oficial; as demais seeds provam que o desempenho nao e artefato da particao.
+    robustness_seeds:
+      - 42
+      - 7
+      - 2024
     target_precision: 0.9227
     target_recall: 0.8102
     threshold_search_start: 0.5
