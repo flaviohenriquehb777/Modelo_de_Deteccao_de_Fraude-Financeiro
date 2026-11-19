@@ -16,6 +16,13 @@ on:
 permissions:
   contents: write
 
+# Serializa execucoes do mesmo ref. Um `git push` de tag dispara os eventos
+# `create` e `push` ao mesmo tempo; sem isso, ambos consultam a release antes
+# de ela existir e um dos dois POSTs falha com HTTP 422 (race condition).
+concurrency:
+  group: publish-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish-release:
     if: github.event_name != 'create' || github.event.ref_type == 'tag'
