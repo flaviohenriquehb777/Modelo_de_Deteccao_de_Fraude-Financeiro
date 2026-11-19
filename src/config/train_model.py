@@ -513,13 +513,19 @@ def evaluate_model_acceptance(metrics: dict, acceptance_config: dict) -> dict:
     checks = {
         "min_cv_precision": metrics["cross_validation_mean_metrics"]["precision"]
         >= acceptance_config["min_cv_precision"],
-        "min_cv_recall": metrics["cross_validation_mean_metrics"]["recall"] >= acceptance_config["min_cv_recall"],
-        "min_calibrated_precision": metrics["threshold_calibration"]["selected"]["metrics"]["precision"]
-        >= acceptance_config["min_calibrated_precision"],
+        "min_cv_recall": (
+            metrics["cross_validation_mean_metrics"]["recall"] >= acceptance_config["min_cv_recall"]
+        ),
+        "min_calibrated_precision": (
+            metrics["threshold_calibration"]["selected"]["metrics"]["precision"]
+            >= acceptance_config["min_calibrated_precision"]
+        ),
         "min_calibrated_recall": metrics["threshold_calibration"]["selected"]["metrics"]["recall"]
         >= acceptance_config["min_calibrated_recall"],
-        "max_business_weighted_gap": metrics["threshold_calibration"]["selected"]["business_alignment"]["weighted_gap"]
-        <= acceptance_config["max_business_weighted_gap"],
+        "max_business_weighted_gap": (
+            metrics["threshold_calibration"]["selected"]["business_alignment"]["weighted_gap"]
+            <= acceptance_config["max_business_weighted_gap"]
+        ),
     }
     return {
         "criteria": {key: float(value) for key, value in acceptance_config.items()},

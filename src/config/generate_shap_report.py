@@ -10,7 +10,12 @@ BOOTSTRAP_ROOT = Path(__file__).resolve().parents[2]
 if str(BOOTSTRAP_ROOT) not in sys.path:
     sys.path.insert(0, str(BOOTSTRAP_ROOT))
 
-from src.config.paths import PROJECT_ROOT, SHAP_EXPLANATIONS_DIR, SHAP_MANIFEST_PATH, SHAP_REPORT_PATH
+from src.config.paths import (
+    PROJECT_ROOT,
+    SHAP_EXPLANATIONS_DIR,
+    SHAP_MANIFEST_PATH,
+    SHAP_REPORT_PATH,
+)
 
 # Builds reprodutiveis: o fpdf2 grava a data de criacao atual nos metadados do PDF,
 # o que faz o arquivo mudar de bytes a cada execucao e quebra a idempotencia do
@@ -90,10 +95,24 @@ class SHAPReportGenerator:
     def _add_cover(self) -> None:
         self.pdf.add_page()
         self.pdf.set_font("Helvetica", "B", 24)
-        self.pdf.cell(0, 40, "Relatorio de Explainability - Deteccao de Fraude", new_x="LMARGIN", new_y="NEXT", align="C")
+        self.pdf.cell(
+            0,
+            40,
+            "Relatorio de Explainability - Deteccao de Fraude",
+            new_x="LMARGIN",
+            new_y="NEXT",
+            align="C",
+        )
         self.pdf.ln(10)
         self.pdf.set_font("Helvetica", "", 15)
-        self.pdf.cell(0, 10, "Analise SHAP do modelo operacional", new_x="LMARGIN", new_y="NEXT", align="C")
+        self.pdf.cell(
+            0,
+            10,
+            "Analise SHAP do modelo operacional",
+            new_x="LMARGIN",
+            new_y="NEXT",
+            align="C",
+        )
         if self.manifest.get("decision_threshold") is not None:
             self.pdf.cell(
                 0,
@@ -121,7 +140,9 @@ class SHAPReportGenerator:
         self._add_image(self.shap_dir / "shap_summary_plot.png")
         top_features = self._get_top_features()
         self._add_body(f"Features mais importantes: {', '.join(top_features)}")
-        self._add_body("A analise SHAP resume como cada feature desloca a probabilidade prevista de fraude.")
+        self._add_body(
+            "A analise SHAP resume como cada feature desloca a probabilidade prevista de fraude."
+        )
 
     def _add_feature_importance(self) -> None:
         self.pdf.add_page()
@@ -129,7 +150,8 @@ class SHAPReportGenerator:
         self._add_image(self.shap_dir / "shap_feature_importance.png")
         if self.stats.get("sample_size") is not None:
             self._add_body(
-                f"Analise calculada sobre {self.stats['sample_size']} amostras com {self.stats.get('total_features', 'N/A')} features."
+                f"Analise calculada sobre {self.stats['sample_size']} amostras com "
+                f"{self.stats.get('total_features', 'N/A')} features."
             )
 
     def _add_dependence_plots(self) -> None:
@@ -140,7 +162,9 @@ class SHAPReportGenerator:
 
         for image_path in images:
             self.pdf.add_page()
-            self._add_title(f"3. Analise de Dependencia - {image_path.stem.replace('dependence_', '')}")
+            self._add_title(
+                f"3. Analise de Dependencia - {image_path.stem.replace('dependence_', '')}"
+            )
             self._add_image(image_path)
 
     def _add_conclusions(self) -> None:
@@ -148,7 +172,10 @@ class SHAPReportGenerator:
         self._add_title("4. Conclusoes e Recomendacoes")
         top_features = self._get_top_features()
         self._add_body(f"Principais drivers de fraude observados: {', '.join(top_features[:3])}.")
-        self._add_body("Recomendacao: monitorar transacoes com sinais extremos nessas features e acompanhar estabilidade do threshold oficial ao longo do tempo.")
+        self._add_body(
+            "Recomendacao: monitorar transacoes com sinais extremos nessas features e "
+            "acompanhar estabilidade do threshold oficial ao longo do tempo."
+        )
         self._add_body(f"Manifesto tecnico: {SHAP_MANIFEST_PATH.relative_to(PROJECT_ROOT)}")
 
 

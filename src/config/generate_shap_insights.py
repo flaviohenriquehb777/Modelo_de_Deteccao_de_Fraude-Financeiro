@@ -61,7 +61,13 @@ def build_analysis_sample(data: pd.DataFrame, sample_size: int, random_state: in
 
 
 class FraudSHAPExplainer:
-    def __init__(self, model_path: Path, data_path: Path, output_dir: Path, explainability_config: dict):
+    def __init__(
+        self,
+        model_path: Path,
+        data_path: Path,
+        output_dir: Path,
+        explainability_config: dict,
+    ):
         self.pipeline = joblib.load(model_path)
         self.data = pd.read_parquet(data_path)
         self.output_dir = output_dir
@@ -179,11 +185,15 @@ class FraudSHAPExplainer:
         importance_df.to_csv(self.output_dir / "feature_importance_ranking.csv", index=False)
         return importance_df
 
-    def _generate_dependence_plots(self, shap_values: np.ndarray, importance_df: pd.DataFrame) -> None:
+    def _generate_dependence_plots(
+        self, shap_values: np.ndarray, importance_df: pd.DataFrame
+    ) -> None:
         dependence_dir = self.output_dir / "dependence_plots"
         dependence_dir.mkdir(exist_ok=True)
 
-        top_features = importance_df.head(self.explainability_config["top_features"])["feature"].tolist()
+        top_features = (
+            importance_df.head(self.explainability_config["top_features"])["feature"].tolist()
+        )
         for feature in top_features:
             plt.figure(figsize=(10, 6))
             shap.dependence_plot(feature, shap_values, self.X, show=False)
@@ -220,8 +230,16 @@ class FraudSHAPExplainer:
             top_features.append(
                 {
                     "feature": feature_name,
-                    "importance": float(importance_df.loc[importance_df["feature"] == feature_name, "importance"].iloc[0]),
-                    "direction": "positive" if float(np.mean(shap_values[:, feature_position])) > 0 else "negative",
+                    "importance": float(
+                        importance_df.loc[
+                            importance_df["feature"] == feature_name, "importance"
+                        ].iloc[0]
+                    ),
+                    "direction": (
+                        "positive"
+                        if float(np.mean(shap_values[:, feature_position])) > 0
+                        else "negative"
+                    ),
                 }
             )
 
@@ -248,7 +266,9 @@ class FraudSHAPExplainer:
             "model_path": str(PIPELINE_MODEL_PATH.relative_to(PROJECT_ROOT)),
             "data_path": str(PROCESSED_DATA_PATH.relative_to(PROJECT_ROOT)),
             "sample_size": int(len(self.X)),
-            "top_features": importance_df.head(self.explainability_config["top_features"])["feature"].tolist(),
+            "top_features": (
+                importance_df.head(self.explainability_config["top_features"])["feature"].tolist()
+            ),
             "decision_threshold": model_metadata.get("decision_threshold"),
             "generated_files": sorted(
                 str(path.relative_to(PROJECT_ROOT)).replace("\\", "/")

@@ -30,6 +30,7 @@ uv run python -m src.serving.cli --input dados/credicard_tratado.parquet --outpu
 - O DVC do branch atual não depende mais de ponteiros órfãos.
 - O MLflow/DagsHub público expõe o histórico experimental e o best-model.
 - A suíte de testes cobre dados, métricas, inferência, links públicos e serving.
+- O `ruff` roda sem avisos e é gate obrigatório da CI, junto com os testes e o gate de idempotência do DVC.
 
 ## Leitura recomendada
 

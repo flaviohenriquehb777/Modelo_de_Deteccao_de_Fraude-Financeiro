@@ -15,7 +15,6 @@ from src.config.paths import (
     PROJECT_ROOT,
 )
 
-
 DAGSHUB_BASE_URL = "https://dagshub.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro"
 
 # Snapshot do registry publico do DagsHub, VERIFICADO contra a API MLflow publica

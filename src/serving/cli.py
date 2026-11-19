@@ -8,9 +8,15 @@ from src.serving.inference import load_inference_bundle, predict_dataframe
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Interface oficial de inferencia do modelo de fraude.")
-    parser.add_argument("--input", required=True, help="Arquivo CSV ou Parquet com as features de entrada.")
-    parser.add_argument("--output", required=True, help="Arquivo de saida CSV ou JSON com as previsoes.")
+    parser = argparse.ArgumentParser(
+        description="Interface oficial de inferencia do modelo de fraude."
+    )
+    parser.add_argument(
+        "--input", required=True, help="Arquivo CSV ou Parquet com as features de entrada."
+    )
+    parser.add_argument(
+        "--output", required=True, help="Arquivo de saida CSV ou JSON com as previsoes."
+    )
     parser.add_argument(
         "--format",
         choices=["csv", "json"],

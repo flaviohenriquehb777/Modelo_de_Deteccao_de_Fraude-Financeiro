@@ -20,7 +20,9 @@ def load_prepare_config() -> tuple[dict, dict]:
 
 
 def validate_input_dataset(df: pd.DataFrame, quality_config: dict) -> dict:
-    missing_columns = [column for column in quality_config["required_columns"] if column not in df.columns]
+    missing_columns = [
+        column for column in quality_config["required_columns"] if column not in df.columns
+    ]
     if missing_columns:
         raise ValueError(f"Colunas obrigatorias ausentes no dataset bruto: {missing_columns}")
 
@@ -31,7 +33,8 @@ def validate_input_dataset(df: pd.DataFrame, quality_config: dict) -> dict:
     row_count = len(df)
     if row_count < quality_config["minimum_rows"]:
         raise ValueError(
-            f"Dataset bruto possui {row_count} linhas, abaixo do minimo {quality_config['minimum_rows']}."
+            f"Dataset bruto possui {row_count} linhas, abaixo do minimo "
+            f"{quality_config['minimum_rows']}."
         )
 
     null_count = int(df.isnull().sum().sum())
@@ -57,7 +60,9 @@ def validate_input_dataset(df: pd.DataFrame, quality_config: dict) -> dict:
     }
 
 
-def validate_prepared_dataset(df: pd.DataFrame, quality_config: dict, preprocess_config: dict) -> dict:
+def validate_prepared_dataset(
+    df: pd.DataFrame, quality_config: dict, preprocess_config: dict
+) -> dict:
     """Valida o dataset de saida.
 
     Importante: as features sao mantidas BRUTAS neste estagio. A transformacao
@@ -131,7 +136,9 @@ def main(input_path: str, output_path: str) -> None:
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     prepared.to_parquet(output_path, index=False)
 
-    report = build_quality_report(raw_metrics, prepared_metrics, preprocess_config, input_path, output_path)
+    report = build_quality_report(
+        raw_metrics, prepared_metrics, preprocess_config, input_path, output_path
+    )
     save_quality_report(report)
 
     print(f"Dados preparados (features brutas) e salvos em {output_path}")

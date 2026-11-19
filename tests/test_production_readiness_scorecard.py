@@ -1,6 +1,6 @@
 import json
 
-from src.config.paths import PROJECT_ROOT, PRODUCTION_READINESS_SCORECARD_PATH
+from src.config.paths import PRODUCTION_READINESS_SCORECARD_PATH, PROJECT_ROOT
 
 
 def test_production_readiness_scorecard_exists():

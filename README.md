@@ -14,7 +14,7 @@
 <img src="https://img.shields.io/badge/Python-3.12-blue.svg" alt="Python 3.12">
 <img src="https://img.shields.io/badge/uv-0.12.5-de5fe9" alt="uv">
 <img src="https://img.shields.io/badge/Depend%C3%AAncias-Fixadas%20(==)-success" alt="Dependências fixadas">
-<img src="https://img.shields.io/badge/Testes-52%20passando-brightgreen" alt="Testes">
+<img src="https://img.shields.io/badge/Testes-94%20passando-brightgreen" alt="Testes">
 <img src="https://img.shields.io/badge/SEED-42-informational" alt="SEED 42">
 <img src="https://img.shields.io/badge/XGBoost-3.3.0-success" alt="XGBoost">
 <img src="https://img.shields.io/badge/SHAP-0.52.0-purple" alt="SHAP">
@@ -54,7 +54,8 @@
 - **Determinismo:** `SEED = 42` aplicado na validação cruzada, no XGBoost e no SHAP. O preparo de dados é determinístico por construção.
 - **Gate de aceite automatizado:** o treino só é aprovado se atingir os critérios de negócio de precisão/recall (ver [Métricas do Modelo](#-métricas-do-modelo)).
 - **Higiene de versionamento:** `mlruns/` não é mais rastreado pelo Git; dados, modelo e artefatos SHAP são versionados exclusivamente pelo DVC.
-- **Suíte de testes:** 52 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
+- **Suíte de testes:** 94 testes passando, cobrindo dados, modelo, métricas, contrato de inferência, relatórios públicos e links do README.
+- **Qualidade estática:** o `ruff` roda **sem avisos** em `src`, `tests`, `conftest.py` e scripts, e é um **gate obrigatório da CI** (além dos testes e do gate de idempotência do DVC).
 
 ---
 
@@ -175,7 +176,7 @@ flowchart TD
 - **Versionamento com DVC:** dados, modelo e explicações SHAP são reconstruíveis via `dvc pull` / `dvc repro`; o [dvc.lock](dvc.lock) é a fonte de verdade dos hashes.
 - **Reprodutibilidade com versões fixas:** o ambiente é gerenciado pelo [uv](https://docs.astral.sh/uv/) — versões `==` no [pyproject.toml](pyproject.toml) e hashes no [uv.lock](uv.lock); a CI sincroniza com `uv sync --frozen` em Python 3.12.
 - **MLflow + DagsHub:** experimentos históricos, métricas e modelos registrados publicamente para auditoria técnica.
-- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala o ambiente com `uv sync --frozen`, valida as dependências (`uv pip check`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
+- **GitHub Actions ([ci-tests.yml](.github/workflows/ci-tests.yml)):** instala o ambiente com `uv sync --frozen`, valida as dependências (`uv pip check`), roda o lint (`ruff check .`), baixa artefatos (`dvc pull`), roda a suíte de testes e executa um **gate de idempotência** (`dvc repro` → `dvc status` deve reportar *up to date*).
 - **Releases versionadas ([publish-release.yml](.github/workflows/publish-release.yml)):** separam explicitamente a entrega original das atualizações posteriores.
 - **Serviço de inferência:** interface CLI versionada em [src/serving/cli.py](src/serving/cli.py), com validação de contrato *fail-closed*.
 
@@ -201,7 +202,7 @@ Artefatos gerados por `generate_shap_insights` e consolidados por `generate_shap
 Modelo_de_Deteccao_de_Fraude-Financeiro/
 ├── .dvc/                                  # Configuração do DVC (config.local fora do Git)
 ├── .github/workflows/
-│   ├── ci-tests.yml                       # Testes + gate de idempotência do DVC
+│   ├── ci-tests.yml                       # Lint + testes + gate de idempotência do DVC
 │   └── publish-release.yml                # Publicação automática de releases
 ├── .dvcignore                             # Padrões ignorados pelo DVC
 ├── .gitignore                             # Padrões ignorados pelo Git
@@ -241,7 +242,7 @@ Modelo_de_Deteccao_de_Fraude-Financeiro/
 │       ├── __init__.py
 │       ├── inference.py                   # Carga do bundle, validação e previsão
 │       └── cli.py                          # Interface oficial de inferência
-├── tests/                                 # 52 testes automatizados
+├── tests/                                 # 94 testes automatizados
 ├── LICENSE.md
 ├── README.md
 ├── conftest.py                            # Garante o projeto no sys.path nos testes
@@ -309,7 +310,8 @@ uv run dvc repro generate_shap_report    # relatório PDF
 ### Testes e verificação de reprodutibilidade
 
 ```bash
-uv run pytest -q                        # suíte completa (52 testes)
+uv run pytest -q                        # suíte completa (94 testes)
+uv run ruff check .                     # lint sem avisos (zero warnings)
 uv run dvc repro && uv run dvc status   # deve reportar "Data and pipelines are up to date."
 ```
 
@@ -505,6 +507,7 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - [v1.1.0 — Rename + DagsHub/DVC/CI](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.1.0)
 - [v1.2.0 — Production Hardening Update](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.2.0)
 - [v1.3.0 — Reprodutibilidade e hardening](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.3.0)
+- [v1.4.0 — Governança, CI e release](https://github.com/flaviohenriquehb777/Modelo_de_Deteccao_de_Fraude-Financeiro/releases/tag/v1.4.0)
 
 > A entrega histórica segue explicitamente preservada pelas tags `snapshot` e `v1.0.0`; nenhum commit do histórico original foi reescrito.
 
@@ -516,6 +519,7 @@ A meta de negócio **bloqueante** é **96/80** (precisão ≈ 96% mantendo recal
 - **Fase 10 — Entrega Oficial do Update:** concluída (release v1.2.0)
 - **Fase 11 — Reprodutibilidade de Nível Sênior:** concluída (release v1.3.0) — versões fixadas, Python 3.12 na CI, gate de idempotência do DVC, `mlruns` fora do Git e README reconstruído
 - **Fase 12 — Ambiente de nível sênior com uv:** concluída — [pyproject.toml](pyproject.toml) (PEP 621) + [uv.lock](uv.lock) com hashes, Python 3.12 fixado em [.python-version](.python-version) e CI migrada para `uv sync --frozen`
+- **Fase 13 — Governança, CI e release:** concluída (release v1.4.0) — `ruff` sem avisos e como gate obrigatório na CI, notebooks higienizados (sem saídas/execução) e documentação revisada
 
 ---
 

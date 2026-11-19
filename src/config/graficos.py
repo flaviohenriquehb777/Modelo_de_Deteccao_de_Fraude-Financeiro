@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 from sklearn.metrics import PredictionErrorDisplay
 
 sns.set_theme(palette="bright")
@@ -22,11 +21,11 @@ def plot_residuos(y_true, y_pred):
 
     sns.histplot(residuos, kde=True, ax=axs[0])
 
-    error_display_01 = PredictionErrorDisplay.from_predictions(
+    PredictionErrorDisplay.from_predictions(
         y_true=y_true, y_pred=y_pred, kind="residual_vs_predicted", ax=axs[1]
     )
 
-    error_display_02 = PredictionErrorDisplay.from_predictions(
+    PredictionErrorDisplay.from_predictions(
         y_true=y_true, y_pred=y_pred, kind="actual_vs_predicted", ax=axs[2]
     )
 
@@ -52,7 +51,7 @@ def plot_comparar_metricas_modelos(df_resultados):
         "RMSE",
     ]
 
-    for ax, metrica, nome in zip(axs.flatten(), comparar_metricas, nomes_metricas):
+    for ax, metrica, nome in zip(axs.flatten(), comparar_metricas, nomes_metricas, strict=True):
         sns.boxplot(
             x="model",
             y=metrica,

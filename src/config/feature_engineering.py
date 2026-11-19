@@ -20,7 +20,9 @@ class TemporalFeatureEngineer(BaseEstimator, TransformerMixin):
     23h e 0h que uma codificacao linear imporia.
     """
 
-    def __init__(self, time_column: str = "Time", seconds_per_hour: int = 3600, hours_in_day: int = 24):
+    def __init__(
+        self, time_column: str = "Time", seconds_per_hour: int = 3600, hours_in_day: int = 24
+    ):
         self.time_column = time_column
         self.seconds_per_hour = seconds_per_hour
         self.hours_in_day = hours_in_day
@@ -31,7 +33,9 @@ class TemporalFeatureEngineer(BaseEstimator, TransformerMixin):
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         transformed = X.copy()
-        hour = (transformed[self.time_column].astype(float) // self.seconds_per_hour) % self.hours_in_day
+        hour = (
+            transformed[self.time_column].astype(float) // self.seconds_per_hour
+        ) % self.hours_in_day
         angle = 2.0 * np.pi * hour / self.hours_in_day
         transformed["hour"] = hour.astype(float)
         transformed["hour_sin"] = np.sin(angle)
