@@ -1,0 +1,45 @@
+# =============================================================================
+# .dockerignore — reduz o contexto de build ao minimo necessario ao serving.
+# -----------------------------------------------------------------------------
+# O container so precisa de: pyproject.toml, uv.lock, .python-version, src/ e
+# models/ (model.pkl + model_metadata.json, restaurados via `dvc pull` antes do
+# build). Todo o resto (dados brutos, notebooks, relatorios, testes, historico
+# Git/DVC e segredos) fica fora da imagem.
+# =============================================================================
+
+# --- Controle de versao e ferramentas ---
+.git
+.github
+.dvc
+.dvcignore
+.trae
+scripts
+
+# --- Ambientes virtuais e caches ---
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.ipynb_checkpoints
+
+# --- Dados, notebooks, relatorios e documentacao (nao usados em runtime) ---
+dados
+notebooks
+reports
+docs
+
+# --- Artefatos de desenvolvimento ---
+tests
+conftest.py
+pytest.ini
+requirements.txt
+mlruns
+
+# --- Segredos e configuracoes locais (nunca vao para a imagem) ---
+.env
+.env.*
+.dvc/config.local

@@ -1,8 +1,21 @@
+import os
 from pathlib import Path
 
 
 def get_project_root() -> Path:
-    """Localiza a raiz do projeto a partir deste arquivo."""
+    """Localiza a raiz do projeto.
+
+    Prioriza a variavel de ambiente ``PROJECT_ROOT`` (ja usada pelo
+    ``conftest.py`` e essencial no container, onde nao existe diretorio
+    ``.git``); sem ela, sobe a arvore procurando um diretorio que contenha
+    ``.git`` e ``src``.
+    """
+    env_root = os.environ.get("PROJECT_ROOT")
+    if env_root:
+        candidate = Path(env_root)
+        if (candidate / "src").exists():
+            return candidate.resolve()
+
     current = Path(__file__).resolve()
     for candidate in [current.parent, *current.parents]:
         if (candidate / ".git").exists() and (candidate / "src").exists():
