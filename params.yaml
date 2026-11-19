@@ -70,6 +70,45 @@ train:
     learning_rate: 0.1
     random_state: 42
     scale_pos_weight: auto
+  # Benchmark multi-modelo + busca restrita de hiperparametros (Fase 5).
+  # Roda como script standalone (src/config/benchmark_models.py), FORA do gate
+  # DVC/CI, para nao penalizar o tempo do pipeline de producao. Toda familia e
+  # avaliada com o MESMO protocolo honesto do modelo oficial: StratifiedKFold
+  # (evaluation.cv_folds) -> calibracao global OOF -> threshold restrito
+  # (maximizar precision sujeito a recall >= benchmark.recall_floor).
+  benchmark:
+    random_state: 42
+    recall_floor: 0.80
+    # Configuracoes-base de cada familia (sem tuning). `scale_pos_weight: auto`
+    # usa a razao de desbalanceamento observada; `class_weight: balanced` faz o
+    # papel equivalente nas familias que suportam peso por classe.
+    candidates:
+      xgboost:
+        max_depth: 7
+        n_estimators: 300
+        learning_rate: 0.1
+        scale_pos_weight: auto
+      lightgbm:
+        n_estimators: 300
+        learning_rate: 0.1
+        num_leaves: 63
+        scale_pos_weight: auto
+      random_forest:
+        n_estimators: 300
+        max_depth: 12
+        class_weight: balanced_subsample
+      logistic_regression:
+        max_iter: 1000
+        class_weight: balanced
+    # Busca restrita (RandomizedSearchCV com scorer que maximiza precision
+    # sujeito a recall >= recall_floor). Validacao ANINHADA: a busca roda dentro
+    # de cada dobra externa, e a metrica reportada e a do out-of-fold honesto.
+    tuning:
+      family: auto
+      n_iter: 10
+      inner_cv_folds: 3
+      outer_cv_folds: 5
+      n_jobs: 4
 
 explainability:
   sample_size: 2000
